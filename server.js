@@ -10,7 +10,7 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: 'https://buildicon-front.onrender.com',
+  origin: 'https://hms-front-0mb7.onrender.com/',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true,
 }));
