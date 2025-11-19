@@ -8,17 +8,24 @@ const cors = require('cors');
 
 const app = express();
 
-// Middleware
+/* --------------------------------------------
+   CORS MIDDLEWARE (SAFE)
+--------------------------------------------- */
 app.use(cors({
   origin: '*'
 }));
 
-// Generic preflight handler
-app.options('*', cors());
+// ❌ REMOVE THIS — it crashes Render
+// app.options('*', cors());
 
+/* --------------------------------------------
+   BODY PARSER
+--------------------------------------------- */
 app.use(express.json({ limit: '5mb' }));
 
-// MongoDB Connection
+/* --------------------------------------------
+   MONGODB CONNECTION
+--------------------------------------------- */
 const connectDB = async () => {
   const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/hmsdb';
   try {
@@ -33,37 +40,39 @@ const connectDB = async () => {
   }
 };
 
-// Route Imports
+/* --------------------------------------------
+   ROUTES IMPORT
+--------------------------------------------- */
 const registrationRoutes = require('./routes/registrationRoutes');
 const patientRoutes = require('./routes/patientRoutes');
 const authRoutes = require('./routes/authRoutes');
 const engineerVisitRoutes = require('./routes/engineerVisitRoutes');
 
-// Mount Routes
+/* --------------------------------------------
+   ROUTE MOUNT
+--------------------------------------------- */
 app.use('/api/registrations', registrationRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/engineer-visits', engineerVisitRoutes);
 
-// Basic Auth Model
-const User = require('./models/user');
-
-// Error Handler Middleware
+/* --------------------------------------------
+   ERROR HANDLER
+--------------------------------------------- */
 app.use((err, req, res, next) => {
   console.error('Unhandled Error:', err);
   res.status(500).json({ message: 'Internal server error' });
 });
 
-// Start Server
+/* --------------------------------------------
+   START SERVER
+--------------------------------------------- */
 const PORT = process.env.PORT || 5000;
 
-// Connect to DB and Start Server
 (async () => {
   try {
     await connectDB();
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-    });
+    app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
   } catch (err) {
     console.error('Server failed to start due to DB connection error.');
     process.exit(1);
