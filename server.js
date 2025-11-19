@@ -14,7 +14,7 @@ app.use(cors({
 }));
 
 // Generic preflight handler
-app.options('*', cors());
+//app.options('*', cors());
 
 app.use(express.json({ limit: '5mb' }));
 
