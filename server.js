@@ -9,9 +9,19 @@ const cors = require('cors');
 const app = express();
 
 // Middleware
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://hms-front-0mb7.onrender.com"
+];
+
 app.use(cors({
-  origin: "https://hms-front-0mb7.onrender.com",
-  methods: ["GET", "POST", "PUT", "DELETE"],
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   credentials: true
 }));
 
