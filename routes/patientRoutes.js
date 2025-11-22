@@ -6,6 +6,7 @@ const patientController = require('../controllers/patientController');
 // CRUD
 router.post('/', patientController.createPatient);        // create
 router.get('/', patientController.getPatients);          // list with optional q, page, limit
+router.get('/next-id', patientController.getNextPatientId); // get next patientId
 router.get('/:id', patientController.getPatientById);    // get by mongo _id or patientId
 router.put('/:id', patientController.updatePatient);     // update by id or patientId
 router.delete('/:id', patientController.deletePatient);  // delete

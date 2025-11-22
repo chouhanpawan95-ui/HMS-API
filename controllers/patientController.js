@@ -1,6 +1,34 @@
 // controllers/patientController.js
 const Patient = require('../models/patient');
 
+// Helper: generate next patientId (kept internal so create/getNextPatientId reuse it)
+async function generateNextPatientId() {
+  // Try to get the highest patientId using a simple sort (works with zero-padded ids)
+  const lastPatient = await Patient.findOne({ patientId: { $regex: '^P\\d+$' } }).sort({ patientId: -1 }).lean();
+
+  let nextId = 'P0001';
+
+  if (lastPatient && lastPatient.patientId) {
+    const lastNumber = parseInt(lastPatient.patientId.replace(/^P/, ''), 10) || 0;
+    const newNumber = (lastNumber + 1).toString().padStart(4, '0');
+    nextId = `P${newNumber}`;
+  } else {
+    // Fallback: scan all patientIds and compute max numeric part
+    const all = await Patient.find({ patientId: { $regex: '^P\\d+$' } }).select('patientId').lean();
+    if (all.length) {
+      let max = 0;
+      all.forEach(p => {
+        const n = parseInt((p.patientId || '').replace(/^P/, ''), 10) || 0;
+        if (n > max) max = n;
+      });
+      const newNumber = (max + 1).toString().padStart(4, '0');
+      nextId = `P${newNumber}`;
+    }
+  }
+
+  return nextId;
+}
+
 /**
  * Create new patient
  */
@@ -8,9 +36,14 @@ exports.createPatient = async (req, res) => {
   try {
     const data = req.body;
 
-    // Validate required fields
+    // If patientId not provided, generate next one
     if (!data.patientId) {
-      return res.status(400).json({ message: 'patientId is required' });
+      try {
+        data.patientId = await generateNextPatientId();
+      } catch (genErr) {
+        console.error('Error generating patientId:', genErr);
+        return res.status(500).json({ message: 'Error generating patientId' });
+      }
     }
 
     // Check for existing patient
@@ -83,6 +116,41 @@ exports.getPatients = async (req, res) => {
     return res.json({ data: patients, total, page: Number(page), limit: Number(limit) });
   } catch (err) {
     console.error(err);
+    return res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+/**
+ * Get next patientId (e.g. P0001 -> P0002)
+ */
+exports.getNextPatientId = async (req, res) => {
+  try {
+    // Try to get the highest patientId using a simple sort (works with zero-padded ids)
+    const lastPatient = await Patient.findOne({ patientId: { $regex: '^P\\d+$' } }).sort({ patientId: -1 }).lean();
+
+    let nextId = 'P0001';
+
+    if (lastPatient && lastPatient.patientId) {
+      const lastNumber = parseInt(lastPatient.patientId.replace(/^P/, ''), 10) || 0;
+      const newNumber = (lastNumber + 1).toString().padStart(4, '0');
+      nextId = `P${newNumber}`;
+    } else {
+      // Fallback: scan all patientIds and compute max numeric part
+      const all = await Patient.find({ patientId: { $regex: '^P\\d+$' } }).select('patientId').lean();
+      if (all.length) {
+        let max = 0;
+        all.forEach(p => {
+          const n = parseInt((p.patientId || '').replace(/^P/, ''), 10) || 0;
+          if (n > max) max = n;
+        });
+        const newNumber = (max + 1).toString().padStart(4, '0');
+        nextId = `P${newNumber}`;
+      }
+    }
+
+    return res.json({ nextId });
+  } catch (err) {
+    console.error('Error getting next patientId:', err);
     return res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
