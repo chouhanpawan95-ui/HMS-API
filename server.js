@@ -51,13 +51,19 @@ const registrationRoutes = require('./routes/registrationRoutes');
 const patientRoutes = require('./routes/patientRoutes');
 const authRoutes = require('./routes/authRoutes');
 const engineerVisitRoutes = require('./routes/engineerVisitRoutes');
-
+const countryRoutes=require('./routes/countryRoutes');
+const cityRoutes = require('./routes/cityRoutes');
+const districtRoutes = require('./routes/districtRoutes');
+const serviceRoutes = require('./routes/serviceRoutes');
 // Mount Routes
 app.use('/api/registrations', registrationRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/engineer-visits', engineerVisitRoutes);
-
+app.use('/api/country',countryRoutes);
+app.use('/api/city', cityRoutes);
+app.use('/api/district', districtRoutes);
+app.use('/api/service', serviceRoutes);
 // Basic Auth Model
 const User = require('./models/user');
 
