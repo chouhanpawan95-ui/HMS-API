@@ -148,7 +148,7 @@ exports.getNextPatientId = async (req, res) => {
       }
     }
 
-    return res.json({ nextId });
+    return res.json({ patientId: nextId });
   } catch (err) {
     console.error('Error getting next patientId:', err);
     return res.status(500).json({ message: 'Server error', error: err.message });

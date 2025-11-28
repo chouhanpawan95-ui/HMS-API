@@ -1,17 +1,22 @@
-// models/city.js
+// models/state.js
 const mongoose = require('mongoose');
 
-const citySchema = new mongoose.Schema({
-  cityId: {
+const stateSchema = new mongoose.Schema({
+  stateId: {
     type: String,
     unique: true,
     sparse: true
   },
-  CityName: {
+  StateName: {
     type: String,
     required: true
   },
-  FK_DistrictId: {
+  StateCode: {
+    type: String,
+    required: true,
+    maxlength: 10
+  },
+  FK_CountryId: {
     type: String,
     required: true
   },
@@ -21,4 +26,4 @@ const citySchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-module.exports = mongoose.model('City', citySchema);
+module.exports = mongoose.model('State', stateSchema);

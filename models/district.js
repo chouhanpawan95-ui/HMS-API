@@ -1,31 +1,24 @@
-// models/District.js
-module.exports = (sequelize, DataTypes) => {
-  const District = sequelize.define(
-    "District",
-    {
-      PK_DistrictId: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true
-      },
-      DistrictName: {
-        type: DataTypes.STRING,
-        allowNull: false
-      },
-      FK_StateId: {
-        type: DataTypes.INTEGER,
-        allowNull: false
-      },
-      IsActive: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: true
-      }
-    },
-    {
-      tableName: "tbldistrictmaster",
-      timestamps: false
-    }
-  );
+// models/district.js
+const mongoose = require('mongoose');
 
-  return District;
-};
+const districtSchema = new mongoose.Schema({
+  districtId: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
+  DistrictName: {
+    type: String,
+    required: true
+  },
+  FK_StateId: {
+    type: String,
+    required: true
+  },
+  IsActive: {
+    type: Boolean,
+    default: true
+  }
+}, { timestamps: true });
+
+module.exports = mongoose.model('District', districtSchema);

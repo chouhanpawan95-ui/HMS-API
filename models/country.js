@@ -1,31 +1,25 @@
-// models/Country.js
-module.exports = (sequelize, DataTypes) => {
-  const Country = sequelize.define(
-    "Country",
-    {
-      PK_CountryId: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true,
-      },
-      CountryName: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      CountryCode: {
-        type: DataTypes.STRING(10),
-        allowNull: false,
-      },
-      IsActive: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: true,
-      },
-    },
-    {
-      tableName: "tblcountrymaster",
-      timestamps: false,
-    }
-  );
+// models/country.js
+const mongoose = require('mongoose');
 
-  return country;
-};
+const countrySchema = new mongoose.Schema({
+  countryId: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
+  CountryName: {
+    type: String,
+    required: true
+  },
+  CountryCode: {
+    type: String,
+    required: true,
+    maxlength: 10
+  },
+  IsActive: {
+    type: Boolean,
+    default: true
+  }
+}, { timestamps: true });
+
+module.exports = mongoose.model('Country', countrySchema);
