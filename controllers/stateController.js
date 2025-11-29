@@ -28,47 +28,21 @@ async function generateNextStateId() {
 exports.createState = async (req, res) => {
   try {
     const data = req.body;
-    console.log('Creating state with data:', data);
-    
-    if (!data.stateId) {
-      try {
-        data.stateId = await generateNextStateId();
-        console.log('Generated stateId:', data.stateId);
-      } catch (genErr) {
-        console.error('Error generating stateId:', genErr);
-        return res.status(500).json({ message: 'Error generating stateId', error: genErr.message });
-      }
-    }
-    
+    if (!data.stateId) data.stateId = await generateNextStateId();
+
     const existing = await State.findOne({ stateId: data.stateId });
-    if (existing) {
-      return res.status(409).json({ message: 'stateId already exists' });
-    }
-    
+    if (existing) return res.status(409).json({ message: 'stateId already exists' });
+
     const state = new State(data);
     const validationError = state.validateSync();
-    if (validationError) {
-      console.log('Validation error:', validationError);
-      return res.status(400).json({
-        message: 'Validation error',
-        errors: Object.values(validationError.errors).map(err => err.message)
-      });
-    }
-    
+    if (validationError) return res.status(400).json({ message: 'Validation error', errors: Object.values(validationError.errors).map(err => err.message) });
+
     const savedState = await state.save();
-    console.log('State saved:', savedState);
     return res.status(201).json(savedState);
   } catch (err) {
     console.error('Error creating state:', err);
-    if (err.name === 'ValidationError') {
-      return res.status(400).json({
-        message: 'Validation error',
-        errors: Object.values(err.errors).map(error => error.message)
-      });
-    }
-    if (err.code === 11000) {
-      return res.status(409).json({ message: 'Duplicate key error', error: err.message });
-    }
+    if (err.name === 'ValidationError') return res.status(400).json({ message: 'Validation error', errors: Object.values(err.errors).map(e => e.message) });
+    if (err.code === 11000) return res.status(409).json({ message: 'Duplicate key error', error: err.message });
     return res.status(500).json({ message: 'Server error while creating state', error: err.message });
   }
 };
@@ -78,24 +52,10 @@ exports.getStates = async (req, res) => {
   try {
     const { page = 1, limit = 25, q } = req.query;
     const filter = {};
-    if (q) {
-      filter.$or = [
-        { stateId: new RegExp(q, 'i') },
-        { StateName: new RegExp(q, 'i') },
-        { StateCode: new RegExp(q, 'i') },
-        { FK_CountryId: new RegExp(q, 'i') }
-      ];
-    }
-    console.log('Fetching states with filter:', filter);
-    
-    const states = await State.find(filter)
-      .skip((page - 1) * limit)
-      .limit(Number(limit))
-      .sort({ createdAt: -1 });
-    
+    if (q) filter.$or = [ { stateId: new RegExp(q, 'i') }, { StateName: new RegExp(q, 'i') }, { StateCode: new RegExp(q, 'i') }, { FK_CountryId: new RegExp(q, 'i') } ];
+
+    const states = await State.find(filter).skip((page - 1) * limit).limit(Number(limit)).sort({ createdAt: -1 });
     const total = await State.countDocuments(filter);
-    console.log(`Found ${states.length} states out of ${total} total`);
-    
     return res.json({ data: states, total, page: Number(page), limit: Number(limit) });
   } catch (err) {
     console.error('Error fetching states:', err);
@@ -117,13 +77,9 @@ exports.getNextStateId = async (req, res) => {
 // Get state by id
 exports.getStateById = async (req, res) => {
   try {
-    const query = /^[0-9a-fA-F]{24}$/.test(req.params.id)
-      ? { _id: req.params.id }
-      : { stateId: req.params.id };
+    const query = /^[0-9a-fA-F]{24}$/.test(req.params.id) ? { _id: req.params.id } : { stateId: req.params.id };
     const state = await State.findOne(query);
-    if (!state) {
-      return res.status(404).json({ message: 'State not found' });
-    }
+    if (!state) return res.status(404).json({ message: 'State not found' });
     return res.json(state);
   } catch (error) {
     console.error('Error fetching state:', error);

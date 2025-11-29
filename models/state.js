@@ -11,14 +11,10 @@ const stateSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  FK_CountryId: { type: String, required: true },
   StateCode: {
     type: String,
-    required: true,
     maxlength: 10
-  },
-  FK_CountryId: {
-    type: String,
-    required: true
   },
   IsActive: {
     type: Boolean,
