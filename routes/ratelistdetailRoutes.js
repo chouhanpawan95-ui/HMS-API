@@ -5,6 +5,7 @@ const rateListDetailController = require('../controllers/ratelistdetailControlle
 router.post('/', rateListDetailController.createRateListDetail);
 router.get('/', rateListDetailController.getRateListDetails);
 router.get('/next-id', rateListDetailController.getNextRLDetailId);
+router.get('/ratelist/:rateListId', rateListDetailController.getByRateListId);
 router.get('/:id', rateListDetailController.getRateListDetailById);
 router.put('/:id', rateListDetailController.updateRateListDetail);
 router.delete('/:id', rateListDetailController.deleteRateListDetail);

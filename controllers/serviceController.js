@@ -81,6 +81,7 @@ exports.getServices = async (req, res) => {
     if (q) {
       filter.$or = [
         { serviceId: new RegExp(q, 'i') },
+          { FK_CategoryId: new RegExp(q, 'i') },
         { ServiceName: new RegExp(q, 'i') },
         { ServiceCode: new RegExp(q, 'i') }
       ];

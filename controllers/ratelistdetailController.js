@@ -62,6 +62,25 @@ exports.getRateListDetails = async (req, res) => {
   }
 };
 
+// Get rate list details by FK_RateListId
+exports.getByRateListId = async (req, res) => {
+  try {
+    const { rateListId } = req.params;
+    const { page = 1, limit = 25 } = req.query;
+    
+    const records = await RateListDetail.find({ FK_RateListId: rateListId })
+      .skip((page - 1) * limit)
+      .limit(Number(limit))
+      .sort({ createdAt: -1 });
+    
+    const total = await RateListDetail.countDocuments({ FK_RateListId: rateListId });
+    return res.json({ data: records, total, page: Number(page), limit: Number(limit), FK_RateListId: rateListId });
+  } catch (err) {
+    console.error('Error fetching rate list details by rate list ID:', err);
+    return res.status(500).json({ message: 'Error fetching rate list details', error: err.message });
+  }
+};
+
 // Get next rlDetailId
 exports.getNextRLDetailId = async (req, res) => {
   try {
