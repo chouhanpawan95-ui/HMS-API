@@ -11,3 +11,4 @@ router.put('/:id', rateListDetailController.updateRateListDetail);
 router.delete('/:id', rateListDetailController.deleteRateListDetail);
 
 module.exports = router;
+
