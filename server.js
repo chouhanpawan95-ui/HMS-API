@@ -58,6 +58,8 @@ const districtRoutes = require('./routes/districtRoutes');
 const serviceRoutes = require('./routes/serviceRoutes');
 const rateListMasterRoutes = require('./routes/ratelistmasterRoutes');
 const rateListDetailRoutes = require('./routes/ratelistdetailRoutes');
+const serviceCategoryMasterRoutes = require('./routes/servicecategorymasterRoutes');
+const serviceDepartmentMasterRoutes = require('./routes/servicedepartmentmasterRoutes');
 // Mount Routes
 app.use('/api/registrations', registrationRoutes);
 app.use('/api/patients', patientRoutes);
@@ -70,6 +72,8 @@ app.use('/api/district', districtRoutes);
 app.use('/api/service', serviceRoutes);
 app.use('/api/ratelistmaster', rateListMasterRoutes);
 app.use('/api/ratelistdetail', rateListDetailRoutes);
+app.use('/api/servicecategorymaster', serviceCategoryMasterRoutes);
+app.use('/api/servicedepartmentmaster', serviceDepartmentMasterRoutes);
 // Basic Auth Model
 const User = require('./models/user');
 
