@@ -1,0 +1,72 @@
+{
+  "info": {
+    "name": "Partymaster API Collection",
+    "_postman_id": "partymaster-collection",
+    "description": "Postman examples for Partymaster POST and GET endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Get Next PartyId",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/api/partymaster/next-id",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["api","partymaster","next-id"]
+        }
+      }
+    },
+    {
+      "name": "Create PartyMaster (POST)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"PartyName\": \"Acme Corporation\",\n  \"ShortName\": \"ACME\",\n  \"PartyType\": \"Corporate\",\n  \"StartDate\": \"2025-12-01T00:00:00.000Z\",\n  \"FK_CityId\": \"CITY001\",\n  \"ContactPerson\": \"John Doe\",\n  \"ContactNoMob\": \"9999999999\",\n  \"EmailId\": \"contact@acme.local\",\n  \"FK_RateListId\": \"RL0001\",\n  \"Remarks\": \"New corporate client\",\n  \"FreeDays\": 30,\n  \"NoofVisit\": 10\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/partymaster",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["api","partymaster"]
+        }
+      }
+    },
+    {
+      "name": "Get PartyMasters (list)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/api/partymaster",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["api","partymaster"]
+        }
+      }
+    },
+    {
+      "name": "Get PartyMaster by id",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/api/partymaster/:id",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["api","partymaster",":id"]
+        }
+      }
+    }
+  ]
+}
