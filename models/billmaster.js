@@ -2,7 +2,8 @@
 const mongoose = require('mongoose');
 
 const BillMasterSchema = new mongoose.Schema({
-  PK_BillId: { type: Number, required: true, unique: true, index: true },
+  billId: { type: String, unique: true, sparse: true },
+  PK_BillId: { type: Number },
   FK_BillingCompanyId: { type: Number },
   FK_FinYearId: { type: Number },
   FK_BranchId: { type: Number },
