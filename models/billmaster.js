@@ -18,7 +18,7 @@ const BillMasterSchema = new mongoose.Schema({
   FK_DoctorId: { type: Number },
   FK_DrDeptID: { type: Number },
   FK_ReferredById: { type: Number },
-  FK_PartyId: { type: Number },
+  FK_PartyId: { type: String },
   IsMLC: { type: Boolean, default: false },
   IsAcademic: { type: Boolean, default: false },
   AgeYear: { type: Number },
