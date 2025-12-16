@@ -92,10 +92,10 @@ exports.getNextBillDetailId = async (req, res) => {
   }
 };
 
-// Get bill detail by id (mongo _id or PK_BillDetailId)
+// Get bill detail by id (mongo _id or FK_BillId)
 exports.getBillDetailById = async (req, res) => {
   try {
-    const query = /^[0-9a-fA-F]{24}$/.test(req.params.id) ? { _id: req.params.id } : { PK_BillDetailId: req.params.id };
+    const query = /^[0-9a-fA-F]{24}$/.test(req.params.id) ? { _id: req.params.id } : { FK_BillId: req.params.id };
     const record = await BillDetail.findOne(query);
     if (!record) return res.status(404).json({ message: 'Bill detail not found' });
     return res.json(record);
