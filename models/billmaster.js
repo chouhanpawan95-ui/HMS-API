@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 
 const BillMasterSchema = new mongoose.Schema({
   billId: { type: String, unique: true, sparse: true },
-  PK_BillId: { type: Number },
+  // PK_BillId: { type: Number },
   FK_BillingCompanyId: { type: Number },
   FK_FinYearId: { type: Number },
   FK_BranchId: { type: Number },
