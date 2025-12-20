@@ -1,0 +1,34 @@
+{
+  "info": { "name": "Receipt Refund Detail API", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" },
+  "item": [
+    {
+      "name": "Create Refund",
+      "request": {
+        "method": "POST",
+        "header": [{"key":"Content-Type","value":"application/json"}],
+        "body": {"mode":"raw","raw":"{\n  \"fkReceiptId\": \"R0001\",\n  \"fkBillId\": \"B0001\",\n  \"fkBranchId\": \"BR01\",\n  \"refundType\": \"Full\",\n  \"refundDate\": \"2025-12-20\",\n  \"refundAmount\": 500,\n  \"chequeNo\": \"CHQ123\",\n  \"chequeDate\": \"2025-12-21\"\n}"},
+        "url": {"raw":"http://localhost:5000/api/receiptrefunddetail","protocol":"http","host":["localhost"],"port":"5000","path":["api","receiptrefunddetail"]}
+      }
+    },
+    {
+      "name": "List Refunds (by receipt)",
+      "request": {"method":"GET","url":{"raw":"http://localhost:5000/api/receiptrefunddetail?fkReceiptId=R0001","protocol":"http","host":["localhost"],"port":"5000","path":["api","receiptrefunddetail"],"query":[{"key":"fkReceiptId","value":"R0001"}]}}
+    },
+    {
+      "name": "Get Next Refund Id",
+      "request": {"method":"GET","url":{"raw":"http://localhost:5000/api/receiptrefunddetail/next-id","protocol":"http","host":["localhost"],"port":"5000","path":["api","receiptrefunddetail","next-id"]}}
+    },
+    {
+      "name": "Get Refund",
+      "request": {"method":"GET","url":{"raw":"http://localhost:5000/api/receiptrefunddetail/RFD0001","protocol":"http","host":["localhost"],"port":"5000","path":["api","receiptrefunddetail","RFD0001"]}}
+    },
+    {
+      "name": "Update Refund",
+      "request": {"method":"PUT","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{ \"isCleared\": true }"},"url":{"raw":"http://localhost:5000/api/receiptrefunddetail/RFD0001","protocol":"http","host":["localhost"],"port":"5000","path":["api","receiptrefunddetail","RFD0001"]}}
+    },
+    {
+      "name": "Delete Refund",
+      "request": {"method":"DELETE","url":{"raw":"http://localhost:5000/api/receiptrefunddetail/RFD0001","protocol":"http","host":["localhost"],"port":"5000","path":["api","receiptrefunddetail","RFD0001"]}}
+    }
+  ]
+}

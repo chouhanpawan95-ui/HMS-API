@@ -1,0 +1,34 @@
+{
+  "info": { "name": "Receipt Adjustment Detail API", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" },
+  "item": [
+    {
+      "name": "Create Adjustment",
+      "request": {
+        "method": "POST",
+        "header": [{"key":"Content-Type","value":"application/json"}],
+        "body": {"mode":"raw","raw":"{\n  \"fkReceiptId\": \"R0001\",\n  \"fkAdjustedBillId\": \"B0001\",\n  \"adjustedAmount\": 500,\n  \"amountTDS\": 0,\n  \"amountDiscount\": 0,\n  \"fkAdjustedById\": \"USR1\",\n  \"adjustedDatetime\": \"2025-12-20T10:30:00Z\"\n}"},
+        "url": {"raw":"http://localhost:5000/api/receiptadjustmentdetail","protocol":"http","host":["localhost"],"port":"5000","path":["api","receiptadjustmentdetail"]}
+      }
+    },
+    {
+      "name": "List Adjustments (by receipt)",
+      "request": {"method":"GET","url":{"raw":"http://localhost:5000/api/receiptadjustmentdetail?fkReceiptId=R0001","protocol":"http","host":["localhost"],"port":"5000","path":["api","receiptadjustmentdetail"],"query":[{"key":"fkReceiptId","value":"R0001"}]}}
+    },
+    {
+      "name": "Get Next ID",
+      "request": {"method":"GET","url":{"raw":"http://localhost:5000/api/receiptadjustmentdetail/next-id","protocol":"http","host":["localhost"],"port":"5000","path":["api","receiptadjustmentdetail","next-id"]}}
+    },
+    {
+      "name": "Get Adjustment",
+      "request": {"method":"GET","url":{"raw":"http://localhost:5000/api/receiptadjustmentdetail/RAD0001","protocol":"http","host":["localhost"],"port":"5000","path":["api","receiptadjustmentdetail","RAD0001"]}}
+    },
+    {
+      "name": "Update Adjustment",
+      "request": {"method":"PUT","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{ \"adjustedAmount\": 450 }"},"url":{"raw":"http://localhost:5000/api/receiptadjustmentdetail/RAD0001","protocol":"http","host":["localhost"],"port":"5000","path":["api","receiptadjustmentdetail","RAD0001"]}}
+    },
+    {
+      "name": "Delete Adjustment",
+      "request": {"method":"DELETE","url":{"raw":"http://localhost:5000/api/receiptadjustmentdetail/RAD0001","protocol":"http","host":["localhost"],"port":"5000","path":["api","receiptadjustmentdetail","RAD0001"]}}
+    }
+  ]
+}

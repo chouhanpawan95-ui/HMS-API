@@ -68,6 +68,9 @@ const partyMasterRoutes = require('./routes/partymasterRoutes');
 const packageMasterRoutes = require('./routes/packagemasterRoutes');
 const packageDetailRoutes = require('./routes/packagedetailRoutes');
 const opdVisitRoutes = require('./routes/opdvisitmasterRoutes');
+const receiptMasterRoutes = require('./routes/receiptmasterRoutes');
+const receiptAdjustmentDetailRoutes = require('./routes/receiptadjustmentdetailRoutes');
+const receiptRefundDetailRoutes = require('./routes/receiptrefunddetailRoutes');
 const opdAppointmentRoutes = require('./routes/opdappointmentRoutes');
 const opdAppointmentBlockDetailRoutes = require('./routes/opdappointmentblockdetailRoutes');
 // Mount Routes
@@ -94,6 +97,9 @@ app.use('/api/packagedetail', packageDetailRoutes);
 app.use('/api/opdvisits', opdVisitRoutes);
 app.use('/api/opdappointments', opdAppointmentRoutes);
 app.use('/api/opdappointmentblockdetail', opdAppointmentBlockDetailRoutes);
+app.use('/api/receiptmasters', receiptMasterRoutes);
+app.use('/api/receiptadjustmentdetail', receiptAdjustmentDetailRoutes);
+app.use('/api/receiptrefunddetail', receiptRefundDetailRoutes);
 // Basic Auth Model
 const User = require('./models/user');
 

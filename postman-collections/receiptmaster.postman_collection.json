@@ -1,0 +1,34 @@
+{
+  "info": { "name": "Receipt Master API", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" },
+  "item": [
+    {
+      "name": "Create Receipt",
+      "request": {
+        "method": "POST",
+        "header": [{"key":"Content-Type","value":"application/json"}],
+        "body": {"mode":"raw","raw":"{\n  \"fkBillingCompanyId\": \"BC01\",\n  \"fkBranchId\": \"BR01\",\n  \"paymentDate\": \"2025-12-20\",\n  \"paymentTime\": \"10:30\",\n  \"amountINR\": 1500,\n  \"paymentStatus\": \"Paid\"\n}"},
+        "url": {"raw":"http://localhost:5000/api/receiptmasters","protocol":"http","host":["localhost"],"port":"5000","path":["api","receiptmasters"]}
+      }
+    },
+    {
+      "name": "List Receipts (date)",
+      "request": {"method":"GET","url":{"raw":"http://localhost:5000/api/receiptmasters?paymentDate=2025-12-20","protocol":"http","host":["localhost"],"port":"5000","path":["api","receiptmasters"],"query":[{"key":"paymentDate","value":"2025-12-20"}]}}
+    },
+    {
+      "name": "Get Next Receipt Id",
+      "request": {"method":"GET","url":{"raw":"http://localhost:5000/api/receiptmasters/next-id","protocol":"http","host":["localhost"],"port":"5000","path":["api","receiptmasters","next-id"]}}
+    },
+    {
+      "name": "Get Receipt",
+      "request": {"method":"GET","url":{"raw":"http://localhost:5000/api/receiptmasters/R0001","protocol":"http","host":["localhost"],"port":"5000","path":["api","receiptmasters","R0001"]}}
+    },
+    {
+      "name": "Update Receipt",
+      "request": {"method":"PUT","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{ \"userRemarks\": \"Updated note\", \"isCleared\": true }"},"url":{"raw":"http://localhost:5000/api/receiptmasters/R0001","protocol":"http","host":["localhost"],"port":"5000","path":["api","receiptmasters","R0001"]}}
+    },
+    {
+      "name": "Delete Receipt",
+      "request": {"method":"DELETE","url":{"raw":"http://localhost:5000/api/receiptmasters/R0001","protocol":"http","host":["localhost"],"port":"5000","path":["api","receiptmasters","R0001"]}}
+    }
+  ]
+}
