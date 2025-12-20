@@ -8,7 +8,7 @@ const serviceSchema = new mongoose.Schema({
     sparse: true
   },
   FK_CategoryId:{
-    type: Number,
+    type: String,
      required: true
   },
   ServiceName: {
@@ -16,7 +16,7 @@ const serviceSchema = new mongoose.Schema({
     required: true
   },
    FK_TestTypeId:{
-    type: Number
+    type: String
   },
     IsOutSidePerform: {
     type: Boolean,

@@ -65,6 +65,7 @@ const billMasterRoutes = require('./routes/billmasterRoutes');
 const partyMasterRoutes = require('./routes/partymasterRoutes');
 const packageMasterRoutes = require('./routes/packagemasterRoutes');
 const packageDetailRoutes = require('./routes/packagedetailRoutes');
+const opdVisitRoutes = require('./routes/opdvisitmasterRoutes');
 // Mount Routes
 app.use('/api/registrations', registrationRoutes);
 app.use('/api/patients', patientRoutes);
@@ -84,6 +85,7 @@ app.use('/api/billmasters', billMasterRoutes);
 app.use('/api/partymaster', partyMasterRoutes);
 app.use('/api/packagemaster', packageMasterRoutes);
 app.use('/api/packagedetail', packageDetailRoutes);
+app.use('/api/opdvisits', opdVisitRoutes);
 // Basic Auth Model
 const User = require('./models/user');
 
