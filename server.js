@@ -58,6 +58,8 @@ const districtRoutes = require('./routes/districtRoutes');
 const serviceRoutes = require('./routes/serviceRoutes');
 const rateListMasterRoutes = require('./routes/ratelistmasterRoutes');
 const rateListDetailRoutes = require('./routes/ratelistdetailRoutes');
+const doctorOpdScheduleRoutes = require('./routes/doctoropdschedulemasterRoutes');
+const doctorOpdScheduleTimeDetailRoutes = require('./routes/doctoropdscheduletimedetailRoutes');
 const serviceCategoryMasterRoutes = require('./routes/servicecategorymasterRoutes');
 const serviceDepartmentMasterRoutes = require('./routes/servicedepartmentmasterRoutes');
 const billDetailRoutes = require('./routes/billdetailRoutes');
@@ -66,6 +68,8 @@ const partyMasterRoutes = require('./routes/partymasterRoutes');
 const packageMasterRoutes = require('./routes/packagemasterRoutes');
 const packageDetailRoutes = require('./routes/packagedetailRoutes');
 const opdVisitRoutes = require('./routes/opdvisitmasterRoutes');
+const opdAppointmentRoutes = require('./routes/opdappointmentRoutes');
+const opdAppointmentBlockDetailRoutes = require('./routes/opdappointmentblockdetailRoutes');
 // Mount Routes
 app.use('/api/registrations', registrationRoutes);
 app.use('/api/patients', patientRoutes);
@@ -78,6 +82,8 @@ app.use('/api/district', districtRoutes);
 app.use('/api/service', serviceRoutes);
 app.use('/api/ratelistmaster', rateListMasterRoutes);
 app.use('/api/ratelistdetail', rateListDetailRoutes);
+app.use('/api/doctoropdschedulemaster', doctorOpdScheduleRoutes);
+app.use('/api/doctoropdscheduletimedetail', doctorOpdScheduleTimeDetailRoutes);
 app.use('/api/servicecategorymaster', serviceCategoryMasterRoutes);
 app.use('/api/servicedepartmentmaster', serviceDepartmentMasterRoutes);
 app.use('/api/billdetails', billDetailRoutes);
@@ -86,6 +92,8 @@ app.use('/api/partymaster', partyMasterRoutes);
 app.use('/api/packagemaster', packageMasterRoutes);
 app.use('/api/packagedetail', packageDetailRoutes);
 app.use('/api/opdvisits', opdVisitRoutes);
+app.use('/api/opdappointments', opdAppointmentRoutes);
+app.use('/api/opdappointmentblockdetail', opdAppointmentBlockDetailRoutes);
 // Basic Auth Model
 const User = require('./models/user');
 

@@ -1,0 +1,34 @@
+{
+  "info": { "name": "OPD Appointment Block Detail API", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" },
+  "item": [
+    {
+      "name": "Create Block Detail",
+      "request": {
+        "method": "POST",
+        "header": [{"key":"Content-Type","value":"application/json"}],
+        "body": {"mode":"raw","raw":"{\n  \"fkBranchId\": \"BR01\",\n  \"fkDoctorId\": \"DR100\",\n  \"apptDate\": \"2025-12-21\",\n  \"apptTime\": \"10:00\",\n  \"fkCreatedById\": \"USR1\",\n  \"blockReason\": \"Doctor on leave\"\n}"},
+        "url": {"raw":"http://localhost:5000/api/opdappointmentblockdetail","protocol":"http","host":["localhost"],"port":"5000","path":["api","opdappointmentblockdetail"]}
+      }
+    },
+    {
+      "name": "List (date)",
+      "request": {"method":"GET","url":{"raw":"http://localhost:5000/api/opdappointmentblockdetail?apptDate=2025-12-21","protocol":"http","host":["localhost"],"port":"5000","path":["api","opdappointmentblockdetail"],"query":[{"key":"apptDate","value":"2025-12-21"}]}}
+    },
+    {
+      "name": "Get Next ID",
+      "request": {"method":"GET","url":{"raw":"http://localhost:5000/api/opdappointmentblockdetail/next-id","protocol":"http","host":["localhost"],"port":"5000","path":["api","opdappointmentblockdetail","next-id"]}}
+    },
+    {
+      "name": "Get Block Detail",
+      "request": {"method":"GET","url":{"raw":"http://localhost:5000/api/opdappointmentblockdetail/OBK0001","protocol":"http","host":["localhost"],"port":"5000","path":["api","opdappointmentblockdetail","OBK0001"]}}
+    },
+    {
+      "name": "Update Block Detail",
+      "request": {"method":"PUT","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{ \"isActive\": false }"},"url":{"raw":"http://localhost:5000/api/opdappointmentblockdetail/OBK0001","protocol":"http","host":["localhost"],"port":"5000","path":["api","opdappointmentblockdetail","OBK0001"]}}
+    },
+    {
+      "name": "Delete Block Detail",
+      "request": {"method":"DELETE","url":{"raw":"http://localhost:5000/api/opdappointmentblockdetail/OBK0001","protocol":"http","host":["localhost"],"port":"5000","path":["api","opdappointmentblockdetail","OBK0001"]}}
+    }
+  ]
+}

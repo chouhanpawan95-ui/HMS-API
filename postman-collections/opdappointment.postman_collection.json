@@ -1,0 +1,50 @@
+{
+  "info": {
+    "name": "OPD Appointment API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Create Appointment",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fkBranchId\": \"BR01\",\n  \"bookingDate\": \"2025-12-20\",\n  \"fkRegId\": \"REG123\",\n  \"apptDate\": \"2025-12-21\",\n  \"apptTime\": \"09:30\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"contactNo\": \"9999999999\"\n}"
+        },
+        "url": { "raw": "http://localhost:5000/api/opdappointments", "protocol": "http", "host": ["localhost"], "port": "5000", "path": ["api","opdappointments"] }
+      }
+    },
+    {
+      "name": "List Appointments (date)",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "http://localhost:5000/api/opdappointments?apptDate=2025-12-21", "protocol": "http", "host": ["localhost"], "port": "5000", "path": ["api","opdappointments"], "query": [{"key":"apptDate","value":"2025-12-21"}] }
+      }
+    },
+    {
+      "name": "Get Next Appointment Id",
+      "request": { "method": "GET", "url": { "raw": "http://localhost:5000/api/opdappointments/next-id", "protocol": "http", "host": ["localhost"], "port": "5000", "path": ["api","opdappointments","next-id"] } }
+    },
+    {
+      "name": "Get Appointment",
+      "request": { "method": "GET", "url": { "raw": "http://localhost:5000/api/opdappointments/APPT0001", "protocol": "http", "host": ["localhost"], "port": "5000", "path": ["api","opdappointments","APPT0001"] } }
+    },
+    {
+      "name": "Update Appointment",
+      "request": {
+        "method": "PUT",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "body": { "mode": "raw", "raw": "{ \"remarks\": \"Updated\", \"isConfirm\": true }" },
+        "url": { "raw": "http://localhost:5000/api/opdappointments/APPT0001", "protocol": "http", "host": ["localhost"], "port": "5000", "path": ["api","opdappointments","APPT0001"] }
+      }
+    },
+    {
+      "name": "Delete Appointment",
+      "request": { "method": "DELETE", "url": { "raw": "http://localhost:5000/api/opdappointments/APPT0001", "protocol": "http", "host": ["localhost"], "port": "5000", "path": ["api","opdappointments","APPT0001"] } }
+    }
+  ]
+}
