@@ -1,48 +1,38 @@
 // controllers/receiptmasterController.js
-const ReceiptMaster = require('../models/receiptmaster');
+// PostgreSQL-only implementation for ReceiptMaster
+const { pgEnabled } = require('../config/pgdb');
+const pg = require('../models/pg');
+const PgReceiptMaster = pg.ReceiptMaster;
+const Op = require('sequelize').Op;
 
 // Helper: generate next receiptId (R0001)
 async function generateNextReceiptId() {
-  const lastRecord = await ReceiptMaster.findOne({ receiptId: { $regex: '^R\\d+$' } }).sort({ receiptId: -1 }).lean();
-  let nextId = 'R0001';
-  if (lastRecord && lastRecord.receiptId) {
-    const lastNumber = parseInt(lastRecord.receiptId.replace(/^R/, ''), 10) || 0;
-    const newNumber = (lastNumber + 1).toString().padStart(4, '0');
-    nextId = `R${newNumber}`;
-  } else {
-    const all = await ReceiptMaster.find({ receiptId: { $regex: '^R\\d+$' } }).select('receiptId').lean();
-    if (all.length) {
-      let max = 0;
-      all.forEach(r => {
-        const n = parseInt((r.receiptId || '').replace(/^R/, ''), 10) || 0;
-        if (n > max) max = n;
-      });
-      const newNumber = (max + 1).toString().padStart(4, '0');
-      nextId = `R${newNumber}`;
-    }
-  }
-  return nextId;
+  if (!pgEnabled) throw new Error('Postgres is not configured. Set DATABASE_URL and USE_PG=true');
+  const rows = await PgReceiptMaster.findAll({ where: { receiptId: { [Op.iLike]: 'R%' } }, attributes: ['receiptId'] });
+  let max = 0;
+  rows.forEach(r => {
+    const n = parseInt((r.receiptId || '').replace(/^R/, ''), 10) || 0;
+    if (n > max) max = n;
+  });
+  const newNumber = (max + 1).toString().padStart(4, '0');
+  return `R${newNumber}`;
 }
 
 // Create new receipt
 exports.createReceipt = async (req, res) => {
   try {
+    if (!pgEnabled) return res.status(500).json({ message: 'Postgres not configured. Set DATABASE_URL and USE_PG=true' });
+
     const data = req.body || {};
     if (!data.receiptId) data.receiptId = await generateNextReceiptId();
 
-    const existing = await ReceiptMaster.findOne({ receiptId: data.receiptId });
+    const existing = await PgReceiptMaster.findOne({ where: { receiptId: data.receiptId } });
     if (existing) return res.status(409).json({ message: 'receiptId already exists' });
 
-    const rec = new ReceiptMaster(data);
-    const validationError = rec.validateSync();
-    if (validationError) return res.status(400).json({ message: 'Validation error', errors: Object.values(validationError.errors).map(e => e.message) });
-
-    const saved = await rec.save();
+    const saved = await PgReceiptMaster.create(data);
     return res.status(201).json(saved);
   } catch (err) {
-    console.error('Error creating receipt master:', err);
-    if (err.name === 'ValidationError') return res.status(400).json({ message: 'Validation error', errors: Object.values(err.errors).map(e => e.message) });
-    if (err.code === 11000) return res.status(409).json({ message: 'Duplicate key error', error: err.message });
+    console.error('Error creating receipt master (PG):', err);
     return res.status(500).json({ message: 'Server error while creating receipt master', error: err.message });
   }
 };
@@ -50,26 +40,33 @@ exports.createReceipt = async (req, res) => {
 // List receipts
 exports.getReceipts = async (req, res) => {
   try {
-    const { page = 1, limit = 25, q, paymentDate, startDate, endDate } = req.query;
-    const filter = {};
-    if (q) filter.$or = [ { receiptId: new RegExp(q, 'i') }, { receiptNo: new RegExp(q, 'i') }, { userRemarks: new RegExp(q, 'i') } ];
+    if (!pgEnabled) return res.status(500).json({ message: 'Postgres not configured. Set DATABASE_URL and USE_PG=true' });
 
+    const { page = 1, limit = 25, q, paymentDate, startDate, endDate } = req.query;
+    const where = {};
+    if (q) {
+      where[Op.or] = [
+        { receiptId: { [Op.iLike]: `%${q}%` } },
+        { receiptNo: { [Op.iLike]: `%${q}%` } },
+        { userRemarks: { [Op.iLike]: `%${q}%` } }
+      ];
+    }
     if (paymentDate) {
       const d = new Date(paymentDate); if (isNaN(d)) return res.status(400).json({ message: 'Invalid paymentDate' });
       const s = new Date(d); s.setHours(0,0,0,0); const e = new Date(d); e.setHours(23,59,59,999);
-      filter.paymentDate = { $gte: s, $lte: e };
+      where.paymentDate = { [Op.between]: [s, e] };
     } else if (startDate || endDate) {
       const range = {};
-      if (startDate) { const s = new Date(startDate); if (isNaN(s)) return res.status(400).json({ message: 'Invalid startDate' }); s.setHours(0,0,0,0); range.$gte = s; }
-      if (endDate) { const e = new Date(endDate); if (isNaN(e)) return res.status(400).json({ message: 'Invalid endDate' }); e.setHours(23,59,59,999); range.$lte = e; }
-      if (Object.keys(range).length) filter.paymentDate = range;
+      if (startDate) { const s = new Date(startDate); if (isNaN(s)) return res.status(400).json({ message: 'Invalid startDate' }); s.setHours(0,0,0,0); range[Op.gte] = s; }
+      if (endDate) { const e = new Date(endDate); if (isNaN(e)) return res.status(400).json({ message: 'Invalid endDate' }); e.setHours(23,59,59,999); range[Op.lte] = e; }
+      if (Object.keys(range).length) where.paymentDate = range;
     }
 
-    const records = await ReceiptMaster.find(filter).skip((Number(page) - 1) * Number(limit)).limit(Number(limit)).sort({ createdAt: -1 });
-    const total = await ReceiptMaster.countDocuments(filter);
+    const records = await PgReceiptMaster.findAll({ where, limit: Number(limit), offset: (page - 1) * limit, order: [['createdAt', 'DESC']] });
+    const total = await PgReceiptMaster.count({ where });
     return res.json({ data: records, total, page: Number(page), limit: Number(limit) });
   } catch (err) {
-    console.error('Error fetching receipts:', err);
+    console.error('Error fetching receipts (PG):', err);
     return res.status(500).json({ message: 'Error fetching receipts', error: err.message });
   }
 };
@@ -77,10 +74,11 @@ exports.getReceipts = async (req, res) => {
 // Get next receiptId
 exports.getNextReceiptId = async (req, res) => {
   try {
+    if (!pgEnabled) return res.status(500).json({ message: 'Postgres not configured. Set DATABASE_URL and USE_PG=true' });
     const nextId = await generateNextReceiptId();
     return res.json({ receiptId: nextId });
   } catch (err) {
-    console.error('Error getting next receiptId:', err);
+    console.error('Error getting next receiptId (PG):', err);
     return res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
@@ -88,12 +86,14 @@ exports.getNextReceiptId = async (req, res) => {
 // Get receipt by id
 exports.getReceiptById = async (req, res) => {
   try {
-    const query = /^[0-9a-fA-F]{24}$/.test(req.params.id) ? { _id: req.params.id } : { receiptId: req.params.id };
-    const record = await ReceiptMaster.findOne(query);
+    if (!pgEnabled) return res.status(500).json({ message: 'Postgres not configured. Set DATABASE_URL and USE_PG=true' });
+    const id = req.params.id;
+    let record = await PgReceiptMaster.findOne({ where: { receiptId: id } });
+    if (!record && !isNaN(parseInt(id))) record = await PgReceiptMaster.findByPk(id);
     if (!record) return res.status(404).json({ message: 'Receipt not found' });
     return res.json(record);
   } catch (err) {
-    console.error('Error fetching receipt:', err);
+    console.error('Error fetching receipt (PG):', err);
     return res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
@@ -101,15 +101,16 @@ exports.getReceiptById = async (req, res) => {
 // Update receipt
 exports.updateReceipt = async (req, res) => {
   try {
+    if (!pgEnabled) return res.status(500).json({ message: 'Postgres not configured. Set DATABASE_URL and USE_PG=true' });
     const { id } = req.params;
     const data = req.body;
-    const rec = (await ReceiptMaster.findById(id)) || (await ReceiptMaster.findOne({ receiptId: id }));
-    if (!rec) return res.status(404).json({ message: 'Receipt not found' });
-    Object.assign(rec, data);
-    await rec.save();
-    return res.json(rec);
+    let record = await PgReceiptMaster.findOne({ where: { receiptId: id } });
+    if (!record && !isNaN(parseInt(id))) record = await PgReceiptMaster.findByPk(id);
+    if (!record) return res.status(404).json({ message: 'Receipt not found' });
+    await record.update(data);
+    return res.json(record);
   } catch (err) {
-    console.error('Error updating receipt:', err);
+    console.error('Error updating receipt (PG):', err);
     return res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
@@ -117,12 +118,20 @@ exports.updateReceipt = async (req, res) => {
 // Delete receipt
 exports.deleteReceipt = async (req, res) => {
   try {
+    if (!pgEnabled) return res.status(500).json({ message: 'Postgres not configured. Set DATABASE_URL and USE_PG=true' });
     const { id } = req.params;
-    const rec = (await ReceiptMaster.findByIdAndDelete(id)) || (await ReceiptMaster.findOneAndDelete({ receiptId: id }));
-    if (!rec) return res.status(404).json({ message: 'Receipt not found' });
-    return res.json({ message: 'Deleted', id: rec._id });
+    const deleted = await PgReceiptMaster.destroy({ where: { receiptId: id } });
+    if (!deleted) {
+      if (!isNaN(parseInt(id))) {
+        const del2 = await PgReceiptMaster.destroy({ where: { id } });
+        if (!del2) return res.status(404).json({ message: 'Receipt not found' });
+        return res.json({ message: 'Deleted', id });
+      }
+      return res.status(404).json({ message: 'Receipt not found' });
+    }
+    return res.json({ message: 'Deleted', id });
   } catch (err) {
-    console.error('Error deleting receipt:', err);
+    console.error('Error deleting receipt (PG):', err);
     return res.status(500).json({ message: 'Server error', error: err.message });
   }
 };

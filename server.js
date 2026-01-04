@@ -7,6 +7,8 @@ const jwt = require('jsonwebtoken');
 const cors = require('cors');
 
 const app = express();
+const { sequelize, testConnection } = require('./config/pgdb');
+const { initPgModels } = require('./models/pg');
 
 // Middleware
 const allowedOrigins = [
@@ -112,15 +114,45 @@ app.use((err, req, res, next) => {
 // Start Server
 const PORT = process.env.PORT || 5000;
 
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function connectWithRetry(attempts = 5, initialDelay = 2000) {
+  let delay = initialDelay;
+  let lastError = null;
+  for (let i = 1; i <= attempts; i++) {
+    try {
+      await testConnection();
+      console.log('✅ Postgres connection established.');
+      return;
+    } catch (err) {
+      lastError = err;
+      console.error(`Postgres connection attempt ${i}/${attempts} failed:`, err.code || err.message);
+      if (i < attempts) {
+        console.log(`Retrying in ${delay} ms...`);
+        await wait(delay);
+        delay *= 2; // exponential backoff
+      }
+    }
+  }
+  // All attempts failed
+  throw lastError;
+}
+
 // Connect to DB and Start Server
 (async () => {
   try {
     await connectDB();
+    await connectWithRetry(5, 2000);
+    if (process.env.DB_SYNC === 'true') {
+      await initPgModels();
+    }
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
     });
   } catch (err) {
-    console.error('Server failed to start due to DB connection error.');
+    console.error('Server failed to start due to DB connection error:', err && err.stack ? err.stack : err);
     process.exit(1);
   }
 })();
