@@ -1,49 +1,38 @@
 // controllers/receiptadjustmentdetailController.js
-const ReceiptAdjustmentDetail = require('../models/receiptadjustmentdetail');
+// PostgreSQL-only implementation for ReceiptAdjustmentDetail
+const { pgEnabled } = require('../config/pgdb');
+const pg = require('../models/pg');
+const PgReceiptAdjustment = pg.ReceiptAdjustmentDetail;
+const Op = require('sequelize').Op;
 
 // Helper: generate next tranId (RAD0001)
 async function generateNextTranId() {
-  const lastRecord = await ReceiptAdjustmentDetail.findOne({ tranId: { $regex: '^RAD\\d+$' } }).sort({ tranId: -1 }).lean();
-  let nextId = 'RAD0001';
-  if (lastRecord && lastRecord.tranId) {
-    const lastNumber = parseInt(lastRecord.tranId.replace(/^RAD/, ''), 10) || 0;
-    const newNumber = (lastNumber + 1).toString().padStart(4, '0');
-    nextId = `RAD${newNumber}`;
-  } else {
-    const all = await ReceiptAdjustmentDetail.find({ tranId: { $regex: '^RAD\\d+$' } }).select('tranId').lean();
-    if (all.length) {
-      let max = 0;
-      all.forEach(r => {
-        const n = parseInt((r.tranId || '').replace(/^RAD/, ''), 10) || 0;
-        if (n > max) max = n;
-      });
-      const newNumber = (max + 1).toString().padStart(4, '0');
-      nextId = `RAD${newNumber}`;
-    }
-  }
-  return nextId;
+  if (!pgEnabled) throw new Error('Postgres is not configured. Set DATABASE_URL and USE_PG=true');
+  const rows = await PgReceiptAdjustment.findAll({ where: { tranId: { [Op.iLike]: 'RAD%' } }, attributes: ['tranId'] });
+  let max = 0;
+  rows.forEach(r => {
+    const n = parseInt((r.tranId || '').replace(/^RAD/, ''), 10) || 0;
+    if (n > max) max = n;
+  });
+  const newNumber = (max + 1).toString().padStart(4, '0');
+  return `RAD${newNumber}`;
 }
 
 // Create new adjustment
 exports.createAdjustment = async (req, res) => {
   try {
+    if (!pgEnabled) return res.status(500).json({ message: 'Postgres not configured. Set DATABASE_URL and USE_PG=true' });
     const data = req.body || {};
     if (!data.fkReceiptId) return res.status(400).json({ message: 'fkReceiptId is required' });
     if (!data.tranId) data.tranId = await generateNextTranId();
 
-    const existing = await ReceiptAdjustmentDetail.findOne({ tranId: data.tranId });
+    const existing = await PgReceiptAdjustment.findOne({ where: { tranId: data.tranId } });
     if (existing) return res.status(409).json({ message: 'tranId already exists' });
 
-    const rec = new ReceiptAdjustmentDetail(data);
-    const validationError = rec.validateSync();
-    if (validationError) return res.status(400).json({ message: 'Validation error', errors: Object.values(validationError.errors).map(e => e.message) });
-
-    const saved = await rec.save();
+    const saved = await PgReceiptAdjustment.create(data);
     return res.status(201).json(saved);
   } catch (err) {
-    console.error('Error creating receipt adjustment detail:', err);
-    if (err.name === 'ValidationError') return res.status(400).json({ message: 'Validation error', errors: Object.values(err.errors).map(e => e.message) });
-    if (err.code === 11000) return res.status(409).json({ message: 'Duplicate key error', error: err.message });
+    console.error('Error creating receipt adjustment detail (PG):', err);
     return res.status(500).json({ message: 'Server error while creating receipt adjustment detail', error: err.message });
   }
 };
@@ -51,27 +40,28 @@ exports.createAdjustment = async (req, res) => {
 // List adjustments with optional q, page, limit and date filters
 exports.getAdjustments = async (req, res) => {
   try {
+    if (!pgEnabled) return res.status(500).json({ message: 'Postgres not configured. Set DATABASE_URL and USE_PG=true' });
     const { q, page = 1, limit = 25, adjustedDatetime, startDate, endDate, fkReceiptId } = req.query;
-    const filter = {};
-    if (q) filter.$or = [ { tranId: new RegExp(q, 'i') }, { fkReceiptId: new RegExp(q, 'i') }, { fkAdjustedBillId: new RegExp(q, 'i') } ];
-    if (fkReceiptId) filter.fkReceiptId = fkReceiptId;
+    const where = {};
+    if (q) where[Op.or] = [ { tranId: { [Op.iLike]: `%${q}%` } }, { fkReceiptId: { [Op.iLike]: `%${q}%` } }, { fkAdjustedBillId: { [Op.iLike]: `%${q}%` } } ];
+    if (fkReceiptId) where.fkReceiptId = fkReceiptId;
 
     if (adjustedDatetime) {
       const d = new Date(adjustedDatetime); if (isNaN(d)) return res.status(400).json({ message: 'Invalid adjustedDatetime' });
       const s = new Date(d); s.setHours(0,0,0,0); const e = new Date(d); e.setHours(23,59,59,999);
-      filter.adjustedDatetime = { $gte: s, $lte: e };
+      where.adjustedDatetime = { [Op.between]: [s, e] };
     } else if (startDate || endDate) {
       const range = {};
-      if (startDate) { const s = new Date(startDate); if (isNaN(s)) return res.status(400).json({ message: 'Invalid startDate' }); s.setHours(0,0,0,0); range.$gte = s; }
-      if (endDate) { const e = new Date(endDate); if (isNaN(e)) return res.status(400).json({ message: 'Invalid endDate' }); e.setHours(23,59,59,999); range.$lte = e; }
-      if (Object.keys(range).length) filter.adjustedDatetime = range;
+      if (startDate) { const s = new Date(startDate); if (isNaN(s)) return res.status(400).json({ message: 'Invalid startDate' }); s.setHours(0,0,0,0); range[Op.gte] = s; }
+      if (endDate) { const e = new Date(endDate); if (isNaN(e)) return res.status(400).json({ message: 'Invalid endDate' }); e.setHours(23,59,59,999); range[Op.lte] = e; }
+      if (Object.keys(range).length) where.adjustedDatetime = range;
     }
 
-    const records = await ReceiptAdjustmentDetail.find(filter).skip((Number(page) - 1) * Number(limit)).limit(Number(limit)).sort({ createdAt: -1 });
-    const total = await ReceiptAdjustmentDetail.countDocuments(filter);
+    const records = await PgReceiptAdjustment.findAll({ where, limit: Number(limit), offset: (page - 1) * limit, order: [['createdAt', 'DESC']] });
+    const total = await PgReceiptAdjustment.count({ where });
     return res.json({ data: records, total, page: Number(page), limit: Number(limit) });
   } catch (err) {
-    console.error('Error fetching receipt adjustments:', err);
+    console.error('Error fetching receipt adjustments (PG):', err);
     return res.status(500).json({ message: 'Error fetching receipt adjustments', error: err.message });
   }
 };
@@ -79,18 +69,16 @@ exports.getAdjustments = async (req, res) => {
 // Get adjustments by FK_ReceiptId
 exports.getByReceiptId = async (req, res) => {
   try {
+    if (!pgEnabled) return res.status(500).json({ message: 'Postgres not configured. Set DATABASE_URL and USE_PG=true' });
     const { receiptId } = req.params;
     const { page = 1, limit = 25 } = req.query;
 
-    const records = await ReceiptAdjustmentDetail.find({ fkReceiptId: receiptId })
-      .skip((Number(page) - 1) * Number(limit))
-      .limit(Number(limit))
-      .sort({ createdAt: -1 });
-
-    const total = await ReceiptAdjustmentDetail.countDocuments({ fkReceiptId: receiptId });
+    const where = { fkReceiptId: receiptId };
+    const records = await PgReceiptAdjustment.findAll({ where, limit: Number(limit), offset: (page - 1) * limit, order: [['createdAt', 'DESC']] });
+    const total = await PgReceiptAdjustment.count({ where });
     return res.json({ data: records, total, page: Number(page), limit: Number(limit), fkReceiptId: receiptId });
   } catch (err) {
-    console.error('Error fetching adjustments by receiptId:', err);
+    console.error('Error fetching adjustments by receiptId (PG):', err);
     return res.status(500).json({ message: 'Error fetching adjustments', error: err.message });
   }
 };
@@ -98,23 +86,26 @@ exports.getByReceiptId = async (req, res) => {
 // Get next tranId
 exports.getNextTranId = async (req, res) => {
   try {
+    if (!pgEnabled) return res.status(500).json({ message: 'Postgres not configured. Set DATABASE_URL and USE_PG=true' });
     const nextId = await generateNextTranId();
     return res.json({ tranId: nextId });
   } catch (err) {
-    console.error('Error getting next tranId:', err);
+    console.error('Error getting next tranId (PG):', err);
     return res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
 
-// Get adjustment by id (mongo _id or tranId)
+// Get adjustment by id (tranId or numeric PK)
 exports.getAdjustmentById = async (req, res) => {
   try {
-    const query = /^[0-9a-fA-F]{24}$/.test(req.params.id) ? { _id: req.params.id } : { tranId: req.params.id };
-    const record = await ReceiptAdjustmentDetail.findOne(query);
+    if (!pgEnabled) return res.status(500).json({ message: 'Postgres not configured. Set DATABASE_URL and USE_PG=true' });
+    const id = req.params.id;
+    let record = await PgReceiptAdjustment.findOne({ where: { tranId: id } });
+    if (!record && !isNaN(parseInt(id))) record = await PgReceiptAdjustment.findByPk(id);
     if (!record) return res.status(404).json({ message: 'Adjustment not found' });
     return res.json(record);
   } catch (err) {
-    console.error('Error fetching adjustment:', err);
+    console.error('Error fetching adjustment (PG):', err);
     return res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
@@ -122,15 +113,16 @@ exports.getAdjustmentById = async (req, res) => {
 // Update adjustment
 exports.updateAdjustment = async (req, res) => {
   try {
+    if (!pgEnabled) return res.status(500).json({ message: 'Postgres not configured. Set DATABASE_URL and USE_PG=true' });
     const { id } = req.params;
     const data = req.body;
-    const rec = (await ReceiptAdjustmentDetail.findById(id)) || (await ReceiptAdjustmentDetail.findOne({ tranId: id }));
-    if (!rec) return res.status(404).json({ message: 'Adjustment not found' });
-    Object.assign(rec, data);
-    await rec.save();
-    return res.json(rec);
+    let record = await PgReceiptAdjustment.findOne({ where: { tranId: id } });
+    if (!record && !isNaN(parseInt(id))) record = await PgReceiptAdjustment.findByPk(id);
+    if (!record) return res.status(404).json({ message: 'Adjustment not found' });
+    await record.update(data);
+    return res.json(record);
   } catch (err) {
-    console.error('Error updating adjustment:', err);
+    console.error('Error updating adjustment (PG):', err);
     return res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
@@ -138,12 +130,20 @@ exports.updateAdjustment = async (req, res) => {
 // Delete adjustment
 exports.deleteAdjustment = async (req, res) => {
   try {
+    if (!pgEnabled) return res.status(500).json({ message: 'Postgres not configured. Set DATABASE_URL and USE_PG=true' });
     const { id } = req.params;
-    const rec = (await ReceiptAdjustmentDetail.findByIdAndDelete(id)) || (await ReceiptAdjustmentDetail.findOneAndDelete({ tranId: id }));
-    if (!rec) return res.status(404).json({ message: 'Adjustment not found' });
-    return res.json({ message: 'Deleted', id: rec._id });
+    const deleted = await PgReceiptAdjustment.destroy({ where: { tranId: id } });
+    if (!deleted) {
+      if (!isNaN(parseInt(id))) {
+        const del2 = await PgReceiptAdjustment.destroy({ where: { id } });
+        if (!del2) return res.status(404).json({ message: 'Adjustment not found' });
+        return res.json({ message: 'Deleted', id });
+      }
+      return res.status(404).json({ message: 'Adjustment not found' });
+    }
+    return res.json({ message: 'Deleted', id });
   } catch (err) {
-    console.error('Error deleting adjustment:', err);
+    console.error('Error deleting adjustment (PG):', err);
     return res.status(500).json({ message: 'Server error', error: err.message });
   }
 };

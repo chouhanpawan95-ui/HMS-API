@@ -1,48 +1,38 @@
 // controllers/receiptrefunddetailController.js
-const ReceiptRefundDetail = require('../models/receiptrefunddetail');
+// PostgreSQL-only implementation for ReceiptRefundDetail
+const { pgEnabled } = require('../config/pgdb');
+const pg = require('../models/pg');
+const PgReceiptRefund = pg.ReceiptRefundDetail;
+const Op = require('sequelize').Op;
+console.log('Loaded controllers/receiptrefunddetailController.js (PG)');
 
 // Helper: generate next refundId (RFD0001)
 async function generateNextRefundId() {
-  const lastRecord = await ReceiptRefundDetail.findOne({ refundId: { $regex: '^RFD\\d+$' } }).sort({ refundId: -1 }).lean();
-  let nextId = 'RFD0001';
-  if (lastRecord && lastRecord.refundId) {
-    const lastNumber = parseInt(lastRecord.refundId.replace(/^RFD/, ''), 10) || 0;
-    const newNumber = (lastNumber + 1).toString().padStart(4, '0');
-    nextId = `RFD${newNumber}`;
-  } else {
-    const all = await ReceiptRefundDetail.find({ refundId: { $regex: '^RFD\\d+$' } }).select('refundId').lean();
-    if (all.length) {
-      let max = 0;
-      all.forEach(r => {
-        const n = parseInt((r.refundId || '').replace(/^RFD/, ''), 10) || 0;
-        if (n > max) max = n;
-      });
-      const newNumber = (max + 1).toString().padStart(4, '0');
-      nextId = `RFD${newNumber}`;
-    }
-  }
-  return nextId;
+  if (!pgEnabled) throw new Error('Postgres is not configured. Set DATABASE_URL and USE_PG=true');
+  const rows = await PgReceiptRefund.findAll({ where: { refundId: { [Op.iLike]: 'RFD%' } }, attributes: ['refundId'] });
+  let max = 0;
+  rows.forEach(r => {
+    const n = parseInt((r.refundId || '').replace(/^RFD/, ''), 10) || 0;
+    if (n > max) max = n;
+  });
+  const newNumber = (max + 1).toString().padStart(4, '0');
+  return `RFD${newNumber}`;
 }
 
 // Create refund detail
 exports.createRefund = async (req, res) => {
   try {
+    if (!pgEnabled) return res.status(500).json({ message: 'Postgres not configured. Set DATABASE_URL and USE_PG=true' });
     const data = req.body || {};
     if (!data.refundId) data.refundId = await generateNextRefundId();
 
-    const existing = await ReceiptRefundDetail.findOne({ refundId: data.refundId });
+    const existing = await PgReceiptRefund.findOne({ where: { refundId: data.refundId } });
     if (existing) return res.status(409).json({ message: 'refundId already exists' });
 
-    const rec = new ReceiptRefundDetail(data);
-    const validationError = rec.validateSync();
-    if (validationError) return res.status(400).json({ message: 'Validation error', errors: Object.values(validationError.errors).map(e => e.message) });
-
-    const saved = await rec.save();
+    const saved = await PgReceiptRefund.create(data);
     return res.status(201).json(saved);
   } catch (err) {
-    console.error('Error creating receipt refund detail:', err);
-    if (err.name === 'ValidationError') return res.status(400).json({ message: 'Validation error', errors: Object.values(err.errors).map(e => e.message) });
-    if (err.code === 11000) return res.status(409).json({ message: 'Duplicate key error', error: err.message });
+    console.error('Error creating receipt refund detail (PG):', err);
     return res.status(500).json({ message: 'Server error while creating receipt refund detail', error: err.message });
   }
 };
@@ -50,27 +40,28 @@ exports.createRefund = async (req, res) => {
 // List refunds with optional filters
 exports.getRefunds = async (req, res) => {
   try {
+    if (!pgEnabled) return res.status(500).json({ message: 'Postgres not configured. Set DATABASE_URL and USE_PG=true' });
     const { q, page = 1, limit = 25, refundDate, startDate, endDate, fkReceiptId } = req.query;
-    const filter = {};
-    if (q) filter.$or = [ { refundId: new RegExp(q, 'i') }, { fkReceiptId: new RegExp(q, 'i') }, { refundReason: new RegExp(q, 'i') } ];
-    if (fkReceiptId) filter.fkReceiptId = fkReceiptId;
+    const where = {};
+    if (q) where[Op.or] = [ { refundId: { [Op.iLike]: `%${q}%` } }, { fkReceiptId: { [Op.iLike]: `%${q}%` } }, { refundReason: { [Op.iLike]: `%${q}%` } } ];
+    if (fkReceiptId) where.fkReceiptId = fkReceiptId;
 
     if (refundDate) {
       const d = new Date(refundDate); if (isNaN(d)) return res.status(400).json({ message: 'Invalid refundDate' });
       const s = new Date(d); s.setHours(0,0,0,0); const e = new Date(d); e.setHours(23,59,59,999);
-      filter.refundDate = { $gte: s, $lte: e };
+      where.refundDate = { [Op.between]: [s, e] };
     } else if (startDate || endDate) {
       const range = {};
-      if (startDate) { const s = new Date(startDate); if (isNaN(s)) return res.status(400).json({ message: 'Invalid startDate' }); s.setHours(0,0,0,0); range.$gte = s; }
-      if (endDate) { const e = new Date(endDate); if (isNaN(e)) return res.status(400).json({ message: 'Invalid endDate' }); e.setHours(23,59,59,999); range.$lte = e; }
-      if (Object.keys(range).length) filter.refundDate = range;
+      if (startDate) { const s = new Date(startDate); if (isNaN(s)) return res.status(400).json({ message: 'Invalid startDate' }); s.setHours(0,0,0,0); range[Op.gte] = s; }
+      if (endDate) { const e = new Date(endDate); if (isNaN(e)) return res.status(400).json({ message: 'Invalid endDate' }); e.setHours(23,59,59,999); range[Op.lte] = e; }
+      if (Object.keys(range).length) where.refundDate = range;
     }
 
-    const records = await ReceiptRefundDetail.find(filter).skip((Number(page) - 1) * Number(limit)).limit(Number(limit)).sort({ createdAt: -1 });
-    const total = await ReceiptRefundDetail.countDocuments(filter);
+    const records = await PgReceiptRefund.findAll({ where, limit: Number(limit), offset: (page - 1) * limit, order: [['createdAt', 'DESC']] });
+    const total = await PgReceiptRefund.count({ where });
     return res.json({ data: records, total, page: Number(page), limit: Number(limit) });
   } catch (err) {
-    console.error('Error fetching receipt refunds:', err);
+    console.error('Error fetching receipt refunds (PG):', err);
     return res.status(500).json({ message: 'Error fetching receipt refunds', error: err.message });
   }
 };
@@ -78,18 +69,16 @@ exports.getRefunds = async (req, res) => {
 // Get refunds by receipt id
 exports.getByReceiptId = async (req, res) => {
   try {
+    if (!pgEnabled) return res.status(500).json({ message: 'Postgres not configured. Set DATABASE_URL and USE_PG=true' });
     const { receiptId } = req.params;
     const { page = 1, limit = 25 } = req.query;
 
-    const records = await ReceiptRefundDetail.find({ fkReceiptId: receiptId })
-      .skip((Number(page) - 1) * Number(limit))
-      .limit(Number(limit))
-      .sort({ createdAt: -1 });
-
-    const total = await ReceiptRefundDetail.countDocuments({ fkReceiptId: receiptId });
+    const where = { fkReceiptId: receiptId };
+    const records = await PgReceiptRefund.findAll({ where, limit: Number(limit), offset: (page - 1) * limit, order: [['createdAt', 'DESC']] });
+    const total = await PgReceiptRefund.count({ where });
     return res.json({ data: records, total, page: Number(page), limit: Number(limit), fkReceiptId: receiptId });
   } catch (err) {
-    console.error('Error fetching refunds by receiptId:', err);
+    console.error('Error fetching refunds by receiptId (PG):', err);
     return res.status(500).json({ message: 'Error fetching refunds', error: err.message });
   }
 };
@@ -97,23 +86,26 @@ exports.getByReceiptId = async (req, res) => {
 // Get next refund id
 exports.getNextRefundId = async (req, res) => {
   try {
+    if (!pgEnabled) return res.status(500).json({ message: 'Postgres not configured. Set DATABASE_URL and USE_PG=true' });
     const nextId = await generateNextRefundId();
     return res.json({ refundId: nextId });
   } catch (err) {
-    console.error('Error getting next refundId:', err);
+    console.error('Error getting next refundId (PG):', err);
     return res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
 
-// Get refund by id (mongo _id or refundId)
+// Get refund by id
 exports.getRefundById = async (req, res) => {
   try {
-    const query = /^[0-9a-fA-F]{24}$/.test(req.params.id) ? { _id: req.params.id } : { refundId: req.params.id };
-    const record = await ReceiptRefundDetail.findOne(query);
+    if (!pgEnabled) return res.status(500).json({ message: 'Postgres not configured. Set DATABASE_URL and USE_PG=true' });
+    const id = req.params.id;
+    let record = await PgReceiptRefund.findOne({ where: { refundId: id } });
+    if (!record && !isNaN(parseInt(id))) record = await PgReceiptRefund.findByPk(id);
     if (!record) return res.status(404).json({ message: 'Refund not found' });
     return res.json(record);
   } catch (err) {
-    console.error('Error fetching refund:', err);
+    console.error('Error fetching refund (PG):', err);
     return res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
@@ -121,15 +113,16 @@ exports.getRefundById = async (req, res) => {
 // Update refund
 exports.updateRefund = async (req, res) => {
   try {
+    if (!pgEnabled) return res.status(500).json({ message: 'Postgres not configured. Set DATABASE_URL and USE_PG=true' });
     const { id } = req.params;
     const data = req.body;
-    const rec = (await ReceiptRefundDetail.findById(id)) || (await ReceiptRefundDetail.findOne({ refundId: id }));
-    if (!rec) return res.status(404).json({ message: 'Refund not found' });
-    Object.assign(rec, data);
-    await rec.save();
-    return res.json(rec);
+    let record = await PgReceiptRefund.findOne({ where: { refundId: id } });
+    if (!record && !isNaN(parseInt(id))) record = await PgReceiptRefund.findByPk(id);
+    if (!record) return res.status(404).json({ message: 'Refund not found' });
+    await record.update(data);
+    return res.json(record);
   } catch (err) {
-    console.error('Error updating refund:', err);
+    console.error('Error updating refund (PG):', err);
     return res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
@@ -137,12 +130,20 @@ exports.updateRefund = async (req, res) => {
 // Delete refund
 exports.deleteRefund = async (req, res) => {
   try {
+    if (!pgEnabled) return res.status(500).json({ message: 'Postgres not configured. Set DATABASE_URL and USE_PG=true' });
     const { id } = req.params;
-    const rec = (await ReceiptRefundDetail.findByIdAndDelete(id)) || (await ReceiptRefundDetail.findOneAndDelete({ refundId: id }));
-    if (!rec) return res.status(404).json({ message: 'Refund not found' });
-    return res.json({ message: 'Deleted', id: rec._id });
+    const deleted = await PgReceiptRefund.destroy({ where: { refundId: id } });
+    if (!deleted) {
+      if (!isNaN(parseInt(id))) {
+        const del2 = await PgReceiptRefund.destroy({ where: { id } });
+        if (!del2) return res.status(404).json({ message: 'Refund not found' });
+        return res.json({ message: 'Deleted', id });
+      }
+      return res.status(404).json({ message: 'Refund not found' });
+    }
+    return res.json({ message: 'Deleted', id });
   } catch (err) {
-    console.error('Error deleting refund:', err);
+    console.error('Error deleting refund (PG):', err);
     return res.status(500).json({ message: 'Server error', error: err.message });
   }
 };

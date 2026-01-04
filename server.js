@@ -7,6 +7,8 @@ const jwt = require('jsonwebtoken');
 const cors = require('cors');
 
 const app = express();
+const { sequelize, testConnection } = require('./config/pgdb');
+const { initPgModels } = require('./models/pg');
 
 // Middleware
 const allowedOrigins = [
@@ -116,6 +118,10 @@ const PORT = process.env.PORT || 5000;
 (async () => {
   try {
     await connectDB();
+    await testConnection();
+    if (process.env.DB_SYNC === 'true') {
+      await initPgModels();
+    }
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
     });
