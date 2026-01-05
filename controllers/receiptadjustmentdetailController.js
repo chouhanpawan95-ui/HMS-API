@@ -109,6 +109,20 @@ exports.getAdjustmentById = async (req, res) => {
     return res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
+//Get bill by billid (tranId or numeric PK)
+exports.getAdjustmentById = async (req, res) => {
+  try {
+    if (!pgEnabled) return res.status(500).json({ message: 'Postgres not configured. Set DATABASE_URL and USE_PG=true' });
+    const id = req.params.billid;
+    let record = await PgReceiptAdjustment.findOne({ where: { fkAdjustedBillId: id } });
+    if (!record && !isNaN(parseInt(id))) record = await PgReceiptAdjustment.findByPk(id);
+    if (!record) return res.status(404).json({ message: 'Adjustment not found' });
+    return res.json(record);
+  } catch (err) {
+    console.error('Error fetching adjustment (PG):', err);
+    return res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
 
 // Update adjustment
 exports.updateAdjustment = async (req, res) => {
