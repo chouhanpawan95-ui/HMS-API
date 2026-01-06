@@ -109,17 +109,20 @@ exports.getAdjustmentById = async (req, res) => {
     return res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
-//Get bill by billid (tranId or numeric PK)
-exports.getAdjustmentById = async (req, res) => {
+// Get adjustment(s) by adjusted bill id (fkAdjustedBillId)
+exports.getByAdjustedBillId = async (req, res) => {
   try {
     if (!pgEnabled) return res.status(500).json({ message: 'Postgres not configured. Set DATABASE_URL and USE_PG=true' });
-    const id = req.params.billid;
-    let record = await PgReceiptAdjustment.findOne({ where: { fkAdjustedBillId: id } });
-    if (!record && !isNaN(parseInt(id))) record = await PgReceiptAdjustment.findByPk(id);
-    if (!record) return res.status(404).json({ message: 'Adjustment not found' });
-    return res.json(record);
+    // Accept either /bill/:billid or /bill/:id for robustness
+    const billid = req.params.billid || req.params.id;
+    if (!billid) return res.status(400).json({ message: 'bill id parameter is required' });
+
+    // Find all adjustments linked to this adjusted bill id
+    const records = await PgReceiptAdjustment.findAll({ where: { fkAdjustedBillId: billid }, order: [['createdAt', 'DESC']] });
+    if (!records || !records.length) return res.status(404).json({ message: 'Adjustment not found' });
+    return res.json({ data: records });
   } catch (err) {
-    console.error('Error fetching adjustment (PG):', err);
+    console.error('Error fetching adjustment by adjusted bill id (PG):', err);
     return res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
