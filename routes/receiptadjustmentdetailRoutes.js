@@ -7,6 +7,7 @@ router.get('/', adjController.getAdjustments);
 router.get('/next-id', adjController.getNextTranId);
 router.get('/receipt/:receiptId', adjController.getByReceiptId);
 router.get('/:id', adjController.getAdjustmentById);
+router.get('/:billid', adjController.getAdjustmentById);
 router.put('/:id', adjController.updateAdjustment);
 router.delete('/:id', adjController.deleteAdjustment);
 
