@@ -125,6 +125,20 @@ exports.getBillById = async (req, res) => {
     return res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+// Get bill by RegId (PG only)
+exports.getBillByRegId = async (req, res) => {
+  try {
+    if (!pgEnabled) return res.status(500).json({ message: 'Postgres not configured. Set DATABASE_URL and USE_PG=true' });
+    const regid = req.params.regid || req.params.id;
+    if (!regid) return res.status(400).json({ message: 'reg id parameter is required' });
+     const records = await PgBillMaster.findAll({ where: { FK_RegId:regid } , order: [['createdAt', 'DESC']] });
+     if (!records || !records.length) return res.status(404).json({ message: 'bill not found' });
+    return res.json({ data: records });
+  } catch (err) {
+    console.error('Error fetching bill by reg id (PG):', err);
+    return res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
 
 // Update bill (PG only)
 exports.updateBill = async (req, res) => {

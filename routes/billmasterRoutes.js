@@ -7,6 +7,7 @@ router.post('/', billController.createBill);
 router.get('/', billController.getBills);
 router.get('/next-id', billController.getNextBillId);
 router.get('/:id', billController.getBillById);
+router.get('/regid/:regid', billController.getBillByRegId);
 router.put('/:id', billController.updateBill);
 router.delete('/:id', billController.deleteBill);
 
