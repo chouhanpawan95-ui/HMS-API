@@ -9,6 +9,7 @@ const engineerVisitRoutes = require('./routes/engineerVisitRoutes');
 const patientRoutes = require('./routes/patientRoutes');
 const billmasterRoutes = require('./routes/billmasterRoutes');
 const receiptadjustmentdetailRoutes = require('./routes/receiptadjustmentdetailRoutes');
+const usermasterRoutes = require('./routes/usermasterRoutes');
 
 const app = express();
 
@@ -21,10 +22,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/engineer-visits', engineerVisitRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/api/billmasters', billmasterRoutes);
-
-// ✅ ADD THIS
 app.use('/api/receiptadjustmentdetail', receiptadjustmentdetailRoutes);
-app.use('/api/receiptadjustmentdetail', receiptadjustmentdetailRoutes);
+app.use('/api/usermasters', usermasterRoutes);
 
 module.exports = app;
 
