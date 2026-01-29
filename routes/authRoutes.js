@@ -1,6 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const User = require('../models/user');
 const router = express.Router();
 const verifyToken = require('../middleware/authMiddleware')
@@ -13,7 +14,14 @@ const verifyToken = require('../middleware/authMiddleware')
     if (existingUser) return res.status(400).json({ message: 'User already exists' });
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ name, email, password: hashedPassword });
+    const newUser = new User({
+      name,
+      email,
+      Email: email,
+      password: hashedPassword,
+      Password: hashedPassword,
+      LoginName: email
+    });
     await newUser.save();
     res.status(201).json({ message: 'User created successfully' });
   } catch (error) {
@@ -24,12 +32,101 @@ const verifyToken = require('../middleware/authMiddleware')
 // ✅ Log In
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: 'Invalid email or password' });
+    console.log('Login request body:', { hasEmail: !!req.body.email, hasPassword: !!req.body.password });
+    const { email, password, login } = req.body;
+    const identifier = (email || login || '').toString().trim();
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) return res.status(400).json({ message: 'Invalid email or password' });
+    // Try multiple fields that might hold the user's login identifier
+    const user = await User.findOne({
+      $or: [
+        { email: identifier },
+        { Email: identifier },
+        { LoginName: identifier },
+        { UserName: identifier },
+        { name: identifier }
+      ]
+    });
+
+    if (!user) {
+      console.log('No user found for identifier in usermasters:', identifier);
+
+      // Fallback: check `users` collection (some existing records may be there)
+      try {
+        const otherUser = await mongoose.connection.collection('users').findOne({ email: identifier });
+        if (otherUser) {
+          console.log('Found user in `users` collection:', { id: otherUser._id, email: otherUser.email });
+          const storedPasswordOther = otherUser.password || otherUser.Password;
+          if (!storedPasswordOther) {
+            console.log('No stored password for otherUser:', otherUser._id);
+            return res.status(400).json({ message: 'Invalid email or password' });
+          }
+
+          let isPasswordValidOther = false;
+          try {
+            isPasswordValidOther = await bcrypt.compare(password || '', storedPasswordOther);
+          } catch (err) {
+            console.error('bcrypt.compare error (other):', err && err.message ? err.message : err);
+          }
+
+          if (!isPasswordValidOther && storedPasswordOther && password && storedPasswordOther === password) {
+            // migrate plaintext on the fly in the `users` collection
+            try {
+              const newHash = await bcrypt.hash(password, 10);
+              await mongoose.connection.collection('users').updateOne({ _id: otherUser._id }, { $set: { password: newHash, Password: newHash } });
+              console.log('Migrated plaintext password to bcrypt for otherUser:', otherUser._id);
+              isPasswordValidOther = true;
+            } catch (err) {
+              console.error('Error migrating plaintext password for otherUser:', err && err.message ? err.message : err);
+            }
+          }
+
+          console.log('Password valid for otherUser:', isPasswordValidOther);
+          if (!isPasswordValidOther) return res.status(400).json({ message: 'Invalid email or password' });
+
+          const token = jwt.sign({ id: otherUser._id }, process.env.JWT_SECRET, { expiresIn: '2h' });
+          return res.status(200).json({ message: 'Login successful', token });
+        }
+      } catch (err) {
+        console.error('Fallback users collection lookup error:', err && err.message ? err.message : err);
+      }
+
+      return res.status(400).json({ message: 'Invalid email or password' });
+    }
+
+    console.log('Found user (partial):', { id: user._id, email: user.email || user.Email, LoginName: user.LoginName });
+
+    const storedPassword = user.password || user.Password;
+    if (!storedPassword) {
+      console.log('No stored password for user:', user._id);
+      return res.status(400).json({ message: 'Invalid email or password' });
+    }
+
+    try {
+      let isPasswordValid = false;
+      try {
+        isPasswordValid = await bcrypt.compare(password || '', storedPassword);
+      } catch (err) {
+        console.error('bcrypt.compare error (primary):', err && err.message ? err.message : err);
+      }
+
+      // Fallback: if stored password is plain text and equals provided password,
+      // accept login and migrate to bcrypt-hash for future security.
+      if (!isPasswordValid && storedPassword && password && storedPassword === password) {
+        try {
+          const newHash = await bcrypt.hash(password, 10);
+          await User.updateOne({ _id: user._id }, { $set: { password: newHash, Password: newHash } });
+          console.log('Migrated plaintext password to bcrypt for user:', user._id);
+          isPasswordValid = true;
+        } catch (err) {
+          console.error('Error migrating plaintext password:', err && err.message ? err.message : err);
+        }
+      }
+
+      console.log('Password valid:', isPasswordValid);
+      if (!isPasswordValid) return res.status(400).json({ message: 'Invalid email or password' });
+    } catch (err) {
+      return res.status(500).json({ message: 'Server error', error: err && err.message });
+    }
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '2h' });
     res.status(200).json({ message: 'Login successful', token });

@@ -102,6 +102,7 @@ app.use('/api/opdappointmentblockdetail', opdAppointmentBlockDetailRoutes);
 app.use('/api/receiptmasters', receiptMasterRoutes);
 app.use('/api/receiptadjustmentdetail', receiptAdjustmentDetailRoutes);
 app.use('/api/receiptrefunddetail', receiptRefundDetailRoutes);
+app.use('/api/usermasters', require('./routes/usermasterRoutes'));
 // Basic Auth Model
 const User = require('./models/user');
 
