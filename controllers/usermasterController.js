@@ -1,5 +1,29 @@
 // controllers/usermasterController.js
+const mongoose = require('mongoose');
 const UserMaster = require('../models/user');
+
+// Helper: generate next userId (USR0001)
+async function generateNextUserId() {
+  const lastRecord = await UserMaster.findOne({ PK_UserId: { $regex: '^USR\\d+$' } }).sort({ PK_UserId: -1 }).lean();
+  let nextId = 'USR0001';
+  if (lastRecord && lastRecord.PK_UserId) {
+    const lastNumber = parseInt(lastRecord.PK_UserId.replace(/^USR/, ''), 10) || 0;
+    const newNumber = (lastNumber + 1).toString().padStart(4, '0');
+    nextId = `USR${newNumber}`;
+  } else {
+    const all = await UserMaster.find({ PK_UserId: { $regex: '^USR\\d+$' } }).select('PK_UserId').lean();
+    if (all.length) {
+      let max = 0;
+      all.forEach(r => {
+        const n = parseInt((r.PK_UserId || '').replace(/^USR/, ''), 10) || 0;
+        if (n > max) max = n;
+      });
+      const newNumber = (max + 1).toString().padStart(4, '0');
+      nextId = `USR${newNumber}`;
+    }
+  }
+  return nextId;
+}
 
 /**
  * Create new user
@@ -126,7 +150,10 @@ exports.getUserById = async (req, res) => {
     let user = await UserMaster.findOne({ PK_UserId: id });
     
     if (!user) {
-      user = await UserMaster.findById(id);
+      // Only try to find by MongoDB _id if `id` looks like a valid ObjectId
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        user = await UserMaster.findById(id);
+      }
     }
 
     if (!user) {
@@ -175,13 +202,23 @@ exports.updateUser = async (req, res) => {
     );
 
     if (!user) {
-      user = await UserMaster.findByIdAndUpdate(
-        id,
+      user = await UserMaster.findOneAndUpdate(
+        { PK_UserId: id },
         updateData,
         { new: true, runValidators: true }
       );
     }
 
+    if (!user) {
+      // Only try to update by MongoDB _id if `id` is a valid ObjectId
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        user = await UserMaster.findByIdAndUpdate(
+          id,
+          updateData,
+          { new: true, runValidators: true }
+        );
+      }
+    }
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -228,7 +265,10 @@ exports.deleteUser = async (req, res) => {
     let user = await UserMaster.findOneAndDelete({ PK_UserId: id });
 
     if (!user) {
-      user = await UserMaster.findByIdAndDelete(id);
+      // Only try to delete by MongoDB _id if `id` looks like a valid ObjectId
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        user = await UserMaster.findByIdAndDelete(id);
+      }
     }
 
     if (!user) {
@@ -345,5 +385,18 @@ exports.getActiveUsers = async (req, res) => {
       message: 'Server error while fetching users',
       error: err.message
     });
+  }
+};
+
+/**
+ * Get next userId
+ */
+exports.getNextUserId = async (req, res) => {
+  try {
+    const nextId = await generateNextUserId();
+    return res.json({ PK_UserId: nextId });
+  } catch (err) {
+    console.error('Error getting next userId:', err);
+    return res.status(500).json({ message: 'Server error', error: err.message });
   }
 };

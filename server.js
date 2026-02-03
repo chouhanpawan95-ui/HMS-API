@@ -145,10 +145,18 @@ async function connectWithRetry(attempts = 5, initialDelay = 2000) {
 (async () => {
   try {
     await connectDB();
-    await connectWithRetry(5, 2000);
-    if (process.env.DB_SYNC === 'true') {
-      await initPgModels();
+    try {
+
+      await connectWithRetry(5, 2000);
+
+      
+
+    } catch (pgErr) {
+
+      console.warn('??  Postgres connection failed, but starting server anyway');
+
     }
+    
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
     });

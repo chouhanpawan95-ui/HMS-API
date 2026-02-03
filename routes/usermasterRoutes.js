@@ -6,6 +6,7 @@ const usermasterController = require('../controllers/usermasterController');
 // CRUD Operations
 router.post('/', usermasterController.createUser);                                    // Create user
 router.get('/', usermasterController.getUsers);                                       // Get all users with pagination and search
+router.get('/next-id', usermasterController.getNextUserId);                           // Get next user ID
 router.get('/by-login-name/:loginName', usermasterController.getUserByLoginName);    // Get user by LoginName
 router.get('/by-type/:userType', usermasterController.getUsersByType);               // Get users by type
 router.get('/active', usermasterController.getActiveUsers);                          // Get active users
