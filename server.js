@@ -75,6 +75,8 @@ const receiptAdjustmentDetailRoutes = require('./routes/receiptadjustmentdetailR
 const receiptRefundDetailRoutes = require('./routes/receiptrefunddetailRoutes');
 const opdAppointmentRoutes = require('./routes/opdappointmentRoutes');
 const opdAppointmentBlockDetailRoutes = require('./routes/opdappointmentblockdetailRoutes');
+const ipdRegRoutes = require('./routes/ipdregmasterRoutes');
+const ipdRegDetailRoutes = require('./routes/ipdregdetailRoutes');
 // Mount Routes
 app.use('/api/registrations', registrationRoutes);
 app.use('/api/patients', patientRoutes);
@@ -103,6 +105,8 @@ app.use('/api/receiptmasters', receiptMasterRoutes);
 app.use('/api/receiptadjustmentdetail', receiptAdjustmentDetailRoutes);
 app.use('/api/receiptrefunddetail', receiptRefundDetailRoutes);
 app.use('/api/usermasters', require('./routes/usermasterRoutes'));
+app.use('/api/ipdregmasters', ipdRegRoutes);
+app.use('/api/ipdregdetails', ipdRegDetailRoutes);
 // Basic Auth Model
 const User = require('./models/user');
 
