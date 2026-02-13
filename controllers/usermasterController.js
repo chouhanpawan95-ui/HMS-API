@@ -63,8 +63,6 @@ exports.createUser = async (req, res) => {
     return res.status(201).json(savedUser);
 
   } catch (err) {
-    console.error('Error creating user:', err);
-    
     // Handle mongoose validation errors
     if (err.name === 'ValidationError') {
       return res.status(400).json({
@@ -129,9 +127,7 @@ exports.getUsers = async (req, res) => {
         pages: Math.ceil(total / parseInt(limit))
       }
     });
-
   } catch (err) {
-    console.error('Error fetching users:', err);
     return res.status(500).json({
       message: 'Server error while fetching users',
       error: err.message
@@ -163,7 +159,6 @@ exports.getUserById = async (req, res) => {
     return res.status(200).json(user);
 
   } catch (err) {
-    console.error('Error fetching user:', err);
     return res.status(500).json({
       message: 'Server error while fetching user',
       error: err.message
@@ -229,7 +224,6 @@ exports.updateUser = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Error updating user:', err);
     
     // Handle mongoose validation errors
     if (err.name === 'ValidationError') {
@@ -281,7 +275,6 @@ exports.deleteUser = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Error deleting user:', err);
     return res.status(500).json({
       message: 'Server error while deleting user',
       error: err.message
@@ -305,7 +298,6 @@ exports.getUserByLoginName = async (req, res) => {
     return res.status(200).json(user);
 
   } catch (err) {
-    console.error('Error fetching user by login name:', err);
     return res.status(500).json({
       message: 'Server error while fetching user',
       error: err.message
@@ -343,7 +335,6 @@ exports.getUsersByType = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Error fetching users by type:', err);
     return res.status(500).json({
       message: 'Server error while fetching users',
       error: err.message
@@ -380,7 +371,6 @@ exports.getActiveUsers = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Error fetching active users:', err);
     return res.status(500).json({
       message: 'Server error while fetching users',
       error: err.message
@@ -393,10 +383,17 @@ exports.getActiveUsers = async (req, res) => {
  */
 exports.getNextUserId = async (req, res) => {
   try {
+    
+    // Test database connection
+    const testRecord = await UserMaster.findOne({}).lean();
+    
     const nextId = await generateNextUserId();
-    return res.json({ PK_UserId: nextId });
+    
+    const response = { PK_UserId: nextId };
+    
+    res.setHeader('Content-Type', 'application/json');
+    return res.json(response);
   } catch (err) {
-    console.error('Error getting next userId:', err);
     return res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
