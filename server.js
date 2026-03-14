@@ -152,6 +152,7 @@ async function connectWithRetry(attempts = 5, initialDelay = 2000) {
     try {
 
       await connectWithRetry(5, 2000);
+      await initPgModels();
 
       
 

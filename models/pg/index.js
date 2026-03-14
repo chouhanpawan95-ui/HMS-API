@@ -39,10 +39,14 @@ async function initPgModels() {
     return;
   }
 
-  if (process.env.DB_SYNC === 'true') {
+  try {
+    console.log('Starting Postgres model sync...');
     // Use with caution in production
     await sequelize.sync({ alter: true });
     console.log('Postgres models synced');
+  } catch (error) {
+    console.error('Error syncing Postgres models:', error);
+    throw error;
   }
 }
 

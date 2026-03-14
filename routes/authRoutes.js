@@ -10,18 +10,19 @@ const verifyToken = require('../middleware/authMiddleware')
   router.post('/signup', async (req, res) => {
   try {
     const { name, email, password } = req.body;
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ LoginName: email });
     if (existingUser) return res.status(400).json({ message: 'User already exists' });
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = new User({
-      name,
-      email,
-      Email: email,
-      password: hashedPassword,
-      Password: hashedPassword,
-      LoginName: email
+      PK_UserId: Date.now().toString(), // Generate a unique ID
+      UserName: name,
+      LoginName: email,
+      Password: hashedPassword
     });
+    const validationError = newUser.validateSync();
+    if (validationError) return res.status(400).json({ message: 'Validation failed', error: validationError });
+
     await newUser.save();
     res.status(201).json({ message: 'User created successfully' });
   } catch (error) {
