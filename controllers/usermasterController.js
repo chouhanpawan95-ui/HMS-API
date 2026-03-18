@@ -4,25 +4,32 @@ const UserMaster = require('../models/user');
 
 // Helper: generate next userId (USR0001)
 async function generateNextUserId() {
-  const lastRecord = await UserMaster.findOne({ PK_UserId: { $regex: '^USR\\d+$' } }).sort({ PK_UserId: -1 }).lean();
-  let nextId = 'USR0001';
-  if (lastRecord && lastRecord.PK_UserId) {
-    const lastNumber = parseInt(lastRecord.PK_UserId.replace(/^USR/, ''), 10) || 0;
-    const newNumber = (lastNumber + 1).toString().padStart(4, '0');
-    nextId = `USR${newNumber}`;
-  } else {
-    const all = await UserMaster.find({ PK_UserId: { $regex: '^USR\\d+$' } }).select('PK_UserId').lean();
-    if (all.length) {
-      let max = 0;
-      all.forEach(r => {
-        const n = parseInt((r.PK_UserId || '').replace(/^USR/, ''), 10) || 0;
-        if (n > max) max = n;
+  try {
+    // Get all users with USR IDs
+    const allRecords = await UserMaster
+      .find({ PK_UserId: { $regex: '^USR\\d+$' } })
+      .select('PK_UserId')
+      .lean();
+    
+    let maxNumber = 0;
+    
+    // Find the maximum numeric value
+    if (allRecords.length > 0) {
+      allRecords.forEach(record => {
+        const numStr = (record.PK_UserId || '').replace(/^USR/, '');
+        const num = parseInt(numStr, 10);
+        if (!isNaN(num) && num > maxNumber) {
+          maxNumber = num;
+        }
       });
-      const newNumber = (max + 1).toString().padStart(4, '0');
-      nextId = `USR${newNumber}`;
     }
+    
+    const nextNumber = (maxNumber + 1).toString().padStart(4, '0');
+    return `USR${nextNumber}`;
+  } catch (err) {
+    console.error('Error generating next userId:', err);
+    return 'USR0001';
   }
-  return nextId;
 }
 
 /**
@@ -32,6 +39,11 @@ exports.createUser = async (req, res) => {
   try {
     const data = req.body;
 
+    // Auto-generate PK_UserId if not provided
+    if (!data.PK_UserId) {
+      data.PK_UserId = await generateNextUserId();
+    }
+
     // Check if LoginName already exists
     const existingUser = await UserMaster.findOne({ LoginName: data.LoginName });
     if (existingUser) {
@@ -39,11 +51,9 @@ exports.createUser = async (req, res) => {
     }
 
     // Check if PK_UserId already exists
-    if (data.PK_UserId) {
-      const userWithId = await UserMaster.findOne({ PK_UserId: data.PK_UserId });
-      if (userWithId) {
-        return res.status(409).json({ message: 'PK_UserId already exists' });
-      }
+    const userWithId = await UserMaster.findOne({ PK_UserId: data.PK_UserId });
+    if (userWithId) {
+      return res.status(409).json({ message: 'PK_UserId already exists' });
     }
 
     // Create new user
