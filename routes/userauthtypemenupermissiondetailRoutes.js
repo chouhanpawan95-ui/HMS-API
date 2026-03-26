@@ -9,5 +9,6 @@ router.get('/next-id', userauthtypemenupermissiondetailController.getNextUPMenuD
 router.get('/:id', userauthtypemenupermissiondetailController.getMenuPermissionDetailById);        // get by mongo _id or PK_UPMenuDetailId
 router.put('/:id', userauthtypemenupermissiondetailController.updateMenuPermissionDetail);         // update by id or PK_UPMenuDetailId
 router.delete('/:id', userauthtypemenupermissiondetailController.deleteMenuPermissionDetail);      // delete
+router.get('/by-auth-type/:FK_AuthTypeId', userauthtypemenupermissiondetailController.getMenuPermissionsByAuthType); // get menu permissions by auth type
 
 module.exports = router;

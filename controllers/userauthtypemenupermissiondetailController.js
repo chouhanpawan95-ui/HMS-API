@@ -1,5 +1,6 @@
 // controllers/userauthtypemenupermissiondetailController.js
 const UserAuthTypeMenuPermissionDetail = require('../models/userauthtypemenupermissiondetail');
+const MenuMaster = require('../models/menumaster');
 
 // Helper: generate next upMenuDetailId (UPMD0001)
 async function generateNextUPMenuDetailId() {
@@ -284,5 +285,71 @@ exports.getNextUPMenuDetailId = async (req, res) => {
     return res.status(200).json({ PK_UPMenuDetailId: nextId });
   } catch (err) {
     return res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+/**
+ * Get menu permissions by auth type (equivalent to SQL inner join)
+ */
+exports.getMenuPermissionsByAuthType = async (req, res) => {
+  try {
+    // Accept value from path or query for flexibility
+    let FK_AuthTypeId = req.params.FK_AuthTypeId || req.query.FK_AuthTypeId;
+
+    if (!FK_AuthTypeId) {
+      return res.status(400).json({ message: 'FK_AuthTypeId is required, e.g. /by-auth-type/AUTHTYPE0001 or ?FK_AuthTypeId=AUTHTYPE0001' });
+    }
+
+    // Normalize input (trim, strip quotes)
+    FK_AuthTypeId = FK_AuthTypeId.toString().trim().replace(/^'+|'+$/g, '').replace(/^"+|"+$/g, '');
+
+    // Perform inner join equivalent via aggregation
+    const result = await UserAuthTypeMenuPermissionDetail.aggregate([
+      { $match: { FK_AuthTypeId } },
+      {
+        $lookup: {
+          from: 'menumasters',
+          localField: 'FK_MenuId',
+          foreignField: 'PK_MenuId',
+          as: 'menu'
+        }
+      },
+      { $unwind: '$menu' },
+      { $match: { 'menu.IsActive': true } },
+      {
+        $project: {
+          _id: 0,
+          PK_MenuId: '$menu.PK_MenuId',
+          MenuName: '$menu.MenuName',
+          MenuGroup: '$menu.MenuGroup',
+          MenuLink: '$menu.MenuLink',
+          MenuIndex: '$menu.MenuIndex',
+          ShowType: '$menu.ShowType',
+          MenuDetailName: '$menu.MenuDetailName',
+          IsActive: '$menu.IsActive'
+        }
+      }
+    ]);
+
+    if (result.length > 0) {
+      return res.status(200).json(result);
+    }
+
+    // Diagnostic data if empty result, to help user resolve missing data vs missing join
+    const authCount = await UserAuthTypeMenuPermissionDetail.countDocuments({ FK_AuthTypeId });
+    const menuIds = await UserAuthTypeMenuPermissionDetail.distinct('FK_MenuId', { FK_AuthTypeId });
+    const activeMenuCount = await MenuMaster.countDocuments({ PK_MenuId: { $in: menuIds }, IsActive: true });
+
+    return res.status(200).json({
+      message: 'No menu permissions returned for given auth type; please verify FK_AuthTypeId and active menu mapping in DB.',
+      FK_AuthTypeId,
+      authTypePermissionCount: authCount,
+      linkedMenuIds: menuIds,
+      activeMenuMatches: activeMenuCount,
+      data: result
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
