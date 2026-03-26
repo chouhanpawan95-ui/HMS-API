@@ -300,22 +300,49 @@ exports.getMenuPermissionsByAuthType = async (req, res) => {
       return res.status(400).json({ message: 'FK_AuthTypeId is required, e.g. /by-auth-type/AUTHTYPE0001 or ?FK_AuthTypeId=AUTHTYPE0001' });
     }
 
-    // Normalize input (trim, strip quotes)
-    FK_AuthTypeId = FK_AuthTypeId.toString().trim().replace(/^'+|'+$/g, '').replace(/^"+|"+$/g, '');
+    // Normalize input (trim, strip quotes and commas)
+    FK_AuthTypeId = FK_AuthTypeId.toString().trim().replace(/^['",\s]+|['",\s]+$/g, '');
 
-    // Perform inner join equivalent via aggregation
+    // Perform inner join equivalent via aggregation with robust cleanup on DB fields
     const result = await UserAuthTypeMenuPermissionDetail.aggregate([
-      { $match: { FK_AuthTypeId } },
+      {
+        $addFields: {
+          FK_AuthTypeIdClean: {
+            $trim: { input: '$FK_AuthTypeId', chars: ' ",\'' }
+          },
+          FK_MenuIdClean: {
+            $trim: { input: '$FK_MenuId', chars: ' ",\'' }
+          }
+        }
+      },
+      { $match: { FK_AuthTypeIdClean: FK_AuthTypeId } },
       {
         $lookup: {
           from: 'menumasters',
-          localField: 'FK_MenuId',
-          foreignField: 'PK_MenuId',
+          let: { menuId: '$FK_MenuIdClean' },
+          pipeline: [
+            {
+              $addFields: {
+                PK_MenuIdClean: {
+                  $trim: { input: '$PK_MenuId', chars: ' ",\'' }
+                }
+              }
+            },
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$PK_MenuIdClean', '$$menuId'] },
+                    { $eq: ['$IsActive', true] }
+                  ]
+                }
+              }
+            }
+          ],
           as: 'menu'
         }
       },
       { $unwind: '$menu' },
-      { $match: { 'menu.IsActive': true } },
       {
         $project: {
           _id: 0,
