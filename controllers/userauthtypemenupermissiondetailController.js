@@ -363,9 +363,10 @@ exports.getMenuPermissionsByAuthType = async (req, res) => {
     }
 
     // Diagnostic data if empty result, to help user resolve missing data vs missing join
-    const authCount = await UserAuthTypeMenuPermissionDetail.countDocuments({ FK_AuthTypeId });
-    const menuIds = await UserAuthTypeMenuPermissionDetail.distinct('FK_MenuId', { FK_AuthTypeId });
-    const activeMenuCount = await MenuMaster.countDocuments({ PK_MenuId: { $in: menuIds }, IsActive: true });
+    const authRegex = new RegExp(`^${FK_AuthTypeId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[,\\s]*$`);
+    const authCount = await UserAuthTypeMenuPermissionDetail.countDocuments({ FK_AuthTypeId: { $regex: authRegex } });
+    const menuIds = await UserAuthTypeMenuPermissionDetail.distinct('FK_MenuId', { FK_AuthTypeId: { $regex: authRegex } });
+    const activeMenuCount = await MenuMaster.countDocuments({ PK_MenuId: { $in: menuIds.map(id => id.replace(/[,\\s]*$/, '')) }, IsActive: true });
 
     return res.status(200).json({
       message: 'No menu permissions returned for given auth type; please verify FK_AuthTypeId and active menu mapping in DB.',
